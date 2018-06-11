@@ -12,6 +12,7 @@ for fn=fields' % iteration through all named transformers
     ActiveRegulator = DSSCircuit.RegControls; % not a variable in Sample
     
     % set transformer parameters:
+    Bus = null;
 %     per_imag
 %     per_loadloss
 %     per_noloadloss
@@ -68,42 +69,9 @@ for fn=fields' % iteration through all named transformers
     % set regulator parameters:
     ActiveRegulator.MaxTapChange = 1;
     ActiveRegulator.IsReversible = 'No';
-    
-%     band
-%     basefreq
-%     bus
-%     Cogen
-%     CTprim
-%     debugtrace
-%     delay
-%     enabled
-%     EventLog
-%     inversetime
-%     LDC_Z
-%     like
-%     maxtapchange
-%     PTphase
-%     ptratio
-%     R
-%     RemotePTRatio
-%     Reset
-%     rev_Z
-%     revband
-%     revDelay
-%     reversible
-%     revNeutral
-%     revR
-%     revThreshold
-%     revvreg
-%     revX
-%     tapdelay
-%     TapNum
-%     tapwinding
-%     transformer
-%     vlimit
-%     vreg
-%     winding
-%     X
+    InReverseMode = false; % as a result of IsReversible
+    InCogenMode = false;
+    CogenEnabled = false; % not in COM
     
 end
 

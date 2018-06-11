@@ -64,7 +64,7 @@ for i=1:96 % 3rd dimension of Ctrl Ops := # time divisions
     len = DSSCircuit.CtrlQueue.QueueSize;
     if len >= 1 % parse the Queue if it isn't empty
         DSSText.Command = 'Show Control Queue'
-        CtrlQueueFile = 'G:\My Drive\13Node Matlab OpenDSS\IEEE13Nodeckt_ControlQueue.csv';  	
+        CtrlQueueFile = 'C:\Users\Michael Girbino\Documents\13Node Matlab OpenDSS\IEEE13Nodeckt_ControlQueue.csv';  	
         RawQueue = parseCSV(CtrlQueueFile);
         
         % CtrlOps(:,:,i) = [ Time | Handle | ActionCode | Device ]

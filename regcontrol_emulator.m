@@ -12,59 +12,8 @@ for fn=fields' % iteration through all named transformers
     ActiveRegulator = DSSCircuit.RegControls; % not a variable in Sample
     
     % set transformer parameters:
-%     per_imag
-%     per_loadloss
-%     per_noloadloss
-%     per_R
-%     per_Rs
-%     bank
-%     basefreq
-%     bus
-%     buses
-%     conn
-%     conns
-%     emergamps
-%     emerghkVA
-%     enabled
-%     faultrate
-%     flrise
-%     hsrise
-%     kV
-%     kVA
-%     kVAs
-%     kVs
-%     like
-%     m
-%     MaxTap
-%     MinTap
-%     n
-%     normamps
-%     normhkVA
-%     NumTaps
-%     pctperm
-%     phases
-%     ppm_antifloat
-%     repair
-%     Rneut
-%     sub
-%     subname
-%     tap
-%     taps
-%     thermal
-%     wdg
-%     windings
-%     X12
-%     X13
-%     X23
-%     XfmrCode
-%     Xhl
-%     Xht
-%     Xlt
-%     Xneut
-%     XRConst
-%     Xscarray
-    
-    
+    Bus = null;
+
     % set regulator parameters:
     ActiveRegulator.MaxTapChange = 1;
     ActiveRegulator.IsReversible = 'No';
@@ -72,42 +21,9 @@ for fn=fields' % iteration through all named transformers
     InCogenMode = false;
     CogenEnabled = false; % not in COM
     
-    
-%     band
-%     basefreq
-%     bus
-%     Cogen
-%     CTprim
-%     debugtrace
-%     delay
-%     enabled
-%     EventLog
-%     inversetime
-%     LDC_Z
-%     like
-%     maxtapchange
-%     PTphase
-%     ptratio
-%     R
-%     RemotePTRatio
-%     Reset
-%     rev_Z
-%     revband
-%     revDelay
-%     reversible
-%     revNeutral
-%     revR
-%     revThreshold
-%     revvreg
-%     revX
-%     tapdelay
-%     TapNum
-%     tapwinding
-%     transformer
-%     vlimit
-%     vreg
-%     winding
-%     X
+    % initialize helpers:
+    VBuffer = zeros(3,1);
+    FPTphase = Simulink.Parameter(FPTphases.DEFAULT);
     
 end
 
