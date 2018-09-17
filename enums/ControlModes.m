@@ -3,5 +3,6 @@ classdef ControlModes < uint8
        EVENTDRIVEN  (0)
        TIMEDRIVEN   (1)
        MULTIRATE    (2)
+       STATIC       (3)
    end
 end
