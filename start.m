@@ -1,6 +1,6 @@
 %% Start COM Server
 addpath(pwd);
-import RegControlPkg.WindingPkg.WindingObj;
+import RegControlPkg.TransformerObj.WindingObj;
 import RegControlPkg.TransformerObj;
 import RegControlPkg.RegControlObj;
 

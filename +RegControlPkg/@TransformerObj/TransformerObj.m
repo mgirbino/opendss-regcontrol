@@ -135,13 +135,10 @@ classdef TransformerObj < Simulink.Parameter
             NewWdgSize  = (obj.NumWindings-1) * fix(obj.NumWindings/2);
             obj.fNconds = obj.fNphases + 1;
             obj.fNterms = obj.NumWindings;
-
-            addpath('../');
-            import WindingPkg.WindingObj;
             
-            obj.Winding = [];
+            obj.Winding = RegControlPkg.WindingObj.empty;
             for i = 1:MaxWindings
-                obj.Winding(i) = WindingObj;
+                obj.Winding(i) = RegControlPkg.WindingObj;
             end
 
             % array of short circuit measurements between pairs of windings
@@ -222,7 +219,7 @@ classdef TransformerObj < Simulink.Parameter
             obj.XHL = p.Results.XHL;
             obj.XHT = p.Results.XHT;
             obj.XLT = p.Results.XLT;
-            obj.XHLChanged = True; % Set flag to for calc of XSC array from XHL, etc.
+            obj.XHLChanged = true; % Set flag to for calc of XSC array from XHL, etc.
             
             obj.DeltaDirection = 1;
             
@@ -238,13 +235,13 @@ classdef TransformerObj < Simulink.Parameter
             obj.pctLoadLoss = p.Results.pctLoadLoss;
             
             if obj.NormMaxHkVA == 0 % unspecified
-                obj.NormMaxHkVA = 1.1 * Winding(1).kVA;
+                obj.NormMaxHkVA = 1.1 * obj.Winding(1).kVA;
             end
             if obj.EmergMaxHkVA == 0
-                obj.EmergMaxHkVA = 1.5 * Winding(1).kVA; 
+                obj.EmergMaxHkVA = 1.5 * obj.Winding(1).kVA; 
             end
             if obj.pctLoadLoss == 0
-                obj.pctLoadLoss = 2.0 * Winding(1).Rpu * 100.0; %  assume two windings for init'ing
+                obj.pctLoadLoss = 2.0 * obj.Winding(1).Rpu * 100.0; %  assume two windings for init'ing
             end
             
             obj.ppm_FloatFactor  = p.Results.ppm_FloatFactor;
@@ -264,7 +261,7 @@ classdef TransformerObj < Simulink.Parameter
 
             obj.Y_Terminal_FreqMult = p.Results.Y_Terminal_FreqMult;
 
-            obj.Yorder = obj.fNTerms * obj.fNconds;
+            obj.Yorder = obj.fNterms * obj.fNconds;
             
             obj.bank = p.Results.bank;
         end
