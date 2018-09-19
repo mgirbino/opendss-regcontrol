@@ -23,7 +23,7 @@ classdef RegControlObj < Simulink.Parameter
         revR % LDC setting for reverse direction
         revX 
         revBandwidth
-        revDelay
+        RevDelay
         revPowerThreshold % 100 kW
         PTRatio % ratio of the PT that converts the controlled winding
             % voltage to the regulator control voltage;
@@ -57,7 +57,7 @@ classdef RegControlObj < Simulink.Parameter
 %         VregTest        
     end  
     
-    properties (PropertyType = 'uint8 scalar')
+    properties (PropertyType = 'int32 scalar')
         % specified:
         ControlledPhase
         TapLimitPerChange % max allowable tap change per control
@@ -98,23 +98,23 @@ classdef RegControlObj < Simulink.Parameter
 %         LookingForward
     end
     
-    properties (PropertyType = 'char scalar')
-        ElementName
-        RegulatedBus
+    properties
+        ElementName@string
+        RegulatedBus@string
     end
     
     % will probably make into its own bus:
-    properties (PropertyType = 'Transformer scalar')
-        ControlledElement = Transformer;
-    end
+%     properties
+%         ControlledElement = Transformer;
+%     end
     
     methods
         function obj = RegControlObj(varargin)
             p = inputParser;
             numchk = {'numeric'};
             boolchk = {'boolean'};
-            charchk = {'char'};
-            xsfrmrchk = {'Transformer'};
+            strchk = {'string'};
+            % xsfrmrchk = {'TransformerObj'};
             
             nempty = {'nonempty'};
             posint = {'nonempty','integer','positive'};
@@ -166,11 +166,11 @@ classdef RegControlObj < Simulink.Parameter
             addOptional(p,'fInverseTime',false,@(x)validateattributes(x,boolchk,nempty));
             
             % chars:
-            addOptional(p,'ElementName','',@(x)validateattributes(x,charchk,nempty));
-            addOptional(p,'RegulatedBus','',@(x)validateattributes(x,charchk,nempty));
+            addOptional(p,'ElementName',string(""),@(x)validateattributes(x,strchk,nempty));
+            addOptional(p,'RegulatedBus',string(""),@(x)validateattributes(x,strchk,nempty));
 
             % transformer:
-            addOptional(p,'Transformer',TransformerObj,@(x)validateattributes(x,xsfrmrchk,nempty));
+            % addOptional(p,'Transformer',TransformerObj,@(x)validateattributes(x,xsfrmrchk,nempty));
             parse(p,varargin{:});
             
             obj.Bandwidth = p.Results.Bandwidth;
@@ -219,7 +219,21 @@ classdef RegControlObj < Simulink.Parameter
             obj.ElementName = p.Results.ElementName;
             obj.RegulatedBus = p.Results.RegulatedBus;
             
-            obj.Transformer = p.Results.Transformer;
+            % obj.Transformer = p.Results.Transformer;
+        end
+        
+        function text = DSSCommand(obj)
+            % DSSCOMMAND returns text that can be pasted into a DSS script
+            % to create an identical RegControl
+            
+            formatSpec = "New RegControl.%s transformer=%s winding=%d vreg=%g band=%g" + newline;
+            line1 = compose(formatSpec, evalin('caller','inputname(1)'), ...
+                obj.ElementName, obj.xsfWinding, obj.Vreg, obj.Bandwidth);
+            
+            formatSpec = "~ptratio=%g ctprim=%g R=%g X=%g" + newline;
+            line2 = compose(formatSpec, obj.PTRatio, obj.CTRating, obj.R, obj.X);
+
+            text = strcat(line1, line2);
         end
     end
     
