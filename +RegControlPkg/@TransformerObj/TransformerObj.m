@@ -162,6 +162,8 @@ classdef TransformerObj < Simulink.Parameter
             %TRANSFORMEROBJ Construct an instance of Transformer using specified
             %parameters (defaults for unspecified)
             
+            obj.args = varargin; % copy of arguments
+            
             p = inputParser;
             numchk = {'numeric'};
             boolchk = {'logical'};
@@ -365,22 +367,29 @@ classdef TransformerObj < Simulink.Parameter
         function text = DSSCommand(obj)
             % DSSCOMMAND returns text that can be pasted into a DSS script
             % to create an identical Transformer
-            formatSpec = "New Transformer.%s phases=%d bank=%s XHL=%g kVAs=[%s]" + newline;
+            formatSpec = "New Transformer.%s phases=%d bank=%s XHL=%g" + newline;
             line1 = compose(formatSpec, evalin('caller','inputname(1)'), ...
-                obj.fNphases, obj.bank, obj.XHL, string(num2str(obj.kVAs)));
+                obj.fNphases, obj.bank, obj.XHL);
             
-            formatSpec = "~Buses=[%s] kVs=[%s] %%LoadLoss=%g" + newline;
-            line2 = compose(formatSpec, join(obj.buses), string(num2str(obj.kVs)), obj.pctLoadLoss);
+            % doesn't make sense to include:
+%             formatSpec = "~Buses=[%s] kVAs=[%s] kVs=[%s] %%LoadLoss=%g" + newline;
+%             line2 = compose(formatSpec, join(obj.buses), string(num2str(obj.kVAs)), ...
+%                 string(num2str(obj.kVs)), obj.pctLoadLoss);
             
             % multiple windings:
             formatSpec = "~Windings=%d" + newline;
-            line3 = compose(formatSpec, obj.NumWindings);
+            line2 = compose(formatSpec, obj.NumWindings);
             for ii = 1:obj.NumWindings
                 formatSpec = "~wdg=%d bus=%s conn=%s kv=%g kva=%g %%r=%g)" + newline;
-                line3 = line3 + compose( formatSpec, ...
+                line2 = line2 + compose( formatSpec, ...
                     ii, obj.buses(ii), char(obj.Winding(ii).Connection), obj.Winding(ii).kvll, ...
                     obj.Winding(ii).kVA, (obj.Winding(ii).Rpu / 0.01) );
             end
+            
+            formatSpec = "~sub=%s XRConst=%s %%imag=%g %%loadloss=%g %%noloadloss=%g" + newline;
+            line3 = compose(formatSpec, string(obj.IsSubstation), ...
+                string(obj.XRConst), obj.pctImag, ...
+                obj.pctLoadLoss, obj.pctNoLoadLoss);
             
             text = strcat(line1, line2, line3);
         end
