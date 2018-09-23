@@ -126,15 +126,33 @@ classdef TransformerObj < Simulink.Parameter
             
             % specified kvll:
             if ~isempty(obj.kVs)
-                for ii = 1:MaxWindings
+                len = length(obj.kVs);
+                
+                for ii = 1:len
                     obj.Winding(ii).kvll = obj.kVs(ii);
+                end
+                
+                if len < MaxWindings
+                    % leftover after resize:
+                    for ii = (len + 1):MaxWindings
+                        obj.Winding(ii).kvll = 0;
+                    end
                 end
             end
             
             % specified kVAs:
             if ~isempty(obj.kVAs)
-                for ii = 1:MaxWindings
+                len = length(obj.kVAs);
+                
+                for ii = 1:len
                     obj.Winding(ii).kVA = obj.kVAs(ii);
+                end
+                
+                if len < MaxWindings
+                    % leftover after resize:
+                    for ii = (len + 1):MaxWindings
+                        obj.Winding(ii).kVA = 0;
+                    end
                 end
             end
 
@@ -161,20 +179,19 @@ classdef TransformerObj < Simulink.Parameter
         function obj = TransformerObj(varargin)
             %TRANSFORMEROBJ Construct an instance of Transformer using specified
             %parameters (defaults for unspecified)
-            
-            obj.args = varargin; % copy of arguments
-            
+                        
             p = inputParser;
             numchk = {'numeric'};
             boolchk = {'logical'};
             strchk = {'string'};
+            cellchk = {'cell', 'numeric'};
             
             nempty = {'nonempty'};
             posint = {'nonempty','integer','positive'};
             pospct = {'nonempty','positive'};
             
-            addOptional(p,'kVs',[],@(x)validateattributes(x,numchk,nempty));
-            addOptional(p,'kVAs',[],@(x)validateattributes(x,numchk,nempty));
+            addOptional(p,'kVs',double.empty,@(x)validateattributes(x,cellchk,nempty));
+            addOptional(p,'kVAs',double.empty,@(x)validateattributes(x,cellchk,nempty));
             
             addOptional(p,'HVLeadsLV',false,@(x)validateattributes(x,boolchk,nempty));            
             addOptional(p,'IsSubstation',false,@(x)validateattributes(x,boolchk,nempty));
@@ -363,7 +380,7 @@ classdef TransformerObj < Simulink.Parameter
                 end
             end
         end
-        
+
         function text = DSSCommand(obj)
             % DSSCOMMAND returns text that can be pasted into a DSS script
             % to create an identical Transformer
@@ -380,10 +397,13 @@ classdef TransformerObj < Simulink.Parameter
             formatSpec = "~Windings=%d" + newline;
             line2 = compose(formatSpec, obj.NumWindings);
             for ii = 1:obj.NumWindings
-                formatSpec = "~wdg=%d bus=%s conn=%s kv=%g kva=%g %%r=%g)" + newline;
+                formatSpec = "~wdg=%d bus=%s conn=%s kv=%g kva=%g %%r=%g" + newline ...
+                    + "~tap=%g Rneut=%g Xneut=%g MaxTap=%g MinTap=%g" + newline;
                 line2 = line2 + compose( formatSpec, ...
                     ii, obj.buses(ii), char(obj.Winding(ii).Connection), obj.Winding(ii).kvll, ...
-                    obj.Winding(ii).kVA, (obj.Winding(ii).Rpu / 0.01) );
+                    obj.Winding(ii).kVA, (obj.Winding(ii).Rpu / 0.01), obj.Winding(ii).puTap, ...
+                    obj.Winding(ii).Rneut, obj.Winding(ii).Xneut, ...
+                    obj.Winding(ii).MaxTap, obj.Winding(ii).MinTap );
             end
             
             formatSpec = "~sub=%s XRConst=%s %%imag=%g %%loadloss=%g %%noloadloss=%g" + newline;
@@ -391,7 +411,15 @@ classdef TransformerObj < Simulink.Parameter
                 string(obj.XRConst), obj.pctImag, ...
                 obj.pctLoadLoss, obj.pctNoLoadLoss);
             
-            text = strcat(line1, line2, line3);
+            formatSpec = "~emerghkVA=%g faultrate=%g flrise=%g hsrise=%g normhkVA=%g" + newline;
+            line4 = compose(formatSpec, obj.EmergMaxHkVA, obj.FaultRate, obj.FLrise, ...
+                obj.HSrise, obj.NormMaxHkVA);
+            
+            formatSpec = "~Xhl=%g Xht=%g Xlt=%g thermal=%g n=%g m=%g ppm_antifloat=%f";
+            line5 = compose(formatSpec, obj.XHL, obj.XHT, obj.XLT, obj.ThermalTimeconst, ...
+                obj.n_thermal, obj.m_thermal, obj.ppm_FloatFactor);
+                        
+            text = strcat(line1, line2, line3, line4, line5);
         end
     end % of regular methods
     
@@ -416,7 +444,7 @@ classdef TransformerObj < Simulink.Parameter
             % obj = obj.SetNumWindings(obj, 2); % must do this after setting number of phases
             args{5} = 1;
             
-            args{6}  = obj.AnotherTransformer.NumWindings;  % Force allocation of terminals and conductors
+            args{6}  = p.Results.AnotherTransformer.NumWindings;  % Force allocation of terminals and conductors
             
             args{7} = p.Results.AnotherTransformer.XHL;
             args{8} = p.Results.AnotherTransformer.XHT;

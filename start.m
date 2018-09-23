@@ -1,6 +1,6 @@
 %% Start COM Server
 addpath(pwd);
-import RegControlPkg.TransformerObj.WindingObj;
+import RegControlPkg.WindingObj;
 import RegControlPkg.TransformerObj;
 import RegControlPkg.RegControlObj;
 
@@ -21,6 +21,18 @@ else
 end
 
 disp(a)
+
+%% Initializing Transformers and adding to script:
+Reg1 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
+    "buses", ["650.1", "RG60.1"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+
+Reg2 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
+    "buses", ["650.2", "RG60.2"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+
+Reg3 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
+    "buses", ["650.3", "RG60.3"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+
+
 
 %% Data sharing between OpenDSS and Matlab workspace:
 
