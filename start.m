@@ -26,16 +26,22 @@ disp(a)
 Reg1 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.1", "RG60.1"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-Reg2 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
-    "buses", ["650.2", "RG60.2"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+Reg2 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+    'buses', ["650.2", "RG60.2"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-Reg3 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
-    "buses", ["650.3", "RG60.3"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+Reg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+    'buses', ["650.3", "RG60.3"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-% placing transformer phases into script:
-% text = "New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01";
-% 
-% DSSText.command = char(text);
+RCReg1 = RegControlObj('ElementName', "Reg1", 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+
+RCReg2 = RegControlObj('ElementName', "Reg2", 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+
+RCReg3 = RegControlObj('ElementName', "Reg3", 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+
+% new regcontrol.Reg1  transformer=Reg1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9 !maxtapchange=1
 
 DSSText.command = Reg1.DSSCommand;
 DSSText.command = Reg2.DSSCommand;
@@ -72,6 +78,18 @@ end
 DSSText.Command = 'New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01 Xht=0.35 Xlt=0.3';
 DSSText.Command = 'New Transformer.Reg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01';
 DSSText.Command = 'New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01';
+
+%% Data sharing 2.0:
+DSSCircuit.SetActiveElement('Transformer.Reg1');
+xfm1 = DSSCircuit.ActiveCktElement;
+
+Reg1v = Simulink.Parameter;
+Reg1v.DataType = 'double';
+Reg1v.Value = xfm1.Voltages; % 1 x 4 : [re_in im_in re_out im_out]
+
+Reg1i = Simulink.Parameter;
+Reg1i.DataType = 'double';
+Reg1i.Value = xfm1.Currents;
 
 %% Data sharing between OpenDSS and Matlab workspace:
 
