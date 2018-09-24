@@ -384,9 +384,9 @@ classdef TransformerObj < Simulink.Parameter
         function text = DSSCommand(obj)
             % DSSCOMMAND returns text that can be pasted into a DSS script
             % to create an identical Transformer
-            formatSpec = "New Transformer.%s phases=%d bank=%s XHL=%g" + newline;
+            formatSpec = "New Transformer.%s phases=%d bank=%s ";
             line1 = compose(formatSpec, evalin('caller','inputname(1)'), ...
-                obj.fNphases, obj.bank, obj.XHL);
+                obj.fNphases, obj.bank);
             
             % doesn't make sense to include:
 %             formatSpec = "~Buses=[%s] kVAs=[%s] kVs=[%s] %%LoadLoss=%g" + newline;
@@ -394,11 +394,10 @@ classdef TransformerObj < Simulink.Parameter
 %                 string(num2str(obj.kVs)), obj.pctLoadLoss);
             
             % multiple windings:
-            formatSpec = "~Windings=%d" + newline;
+            formatSpec = "Windings=%d ";
             line2 = compose(formatSpec, obj.NumWindings);
             for ii = 1:obj.NumWindings
-                formatSpec = "~wdg=%d bus=%s conn=%s kv=%g kva=%g %%r=%g" + newline ...
-                    + "~tap=%g Rneut=%g Xneut=%g MaxTap=%g MinTap=%g" + newline;
+                formatSpec = "wdg=%d bus=%s conn=%s kv=%g kva=%g %%r=%g tap=%g Rneut=%g Xneut=%g MaxTap=%g MinTap=%g ";
                 line2 = line2 + compose( formatSpec, ...
                     ii, obj.buses(ii), char(obj.Winding(ii).Connection), obj.Winding(ii).kvll, ...
                     obj.Winding(ii).kVA, (obj.Winding(ii).Rpu / 0.01), obj.Winding(ii).puTap, ...
@@ -406,20 +405,20 @@ classdef TransformerObj < Simulink.Parameter
                     obj.Winding(ii).MaxTap, obj.Winding(ii).MinTap );
             end
             
-            formatSpec = "~sub=%s XRConst=%s %%imag=%g %%loadloss=%g %%noloadloss=%g" + newline;
+            formatSpec = "sub=%s XRConst=%s %%imag=%g %%loadloss=%g %%noloadloss=%g ";
             line3 = compose(formatSpec, string(obj.IsSubstation), ...
                 string(obj.XRConst), obj.pctImag, ...
                 obj.pctLoadLoss, obj.pctNoLoadLoss);
             
-            formatSpec = "~emerghkVA=%g faultrate=%g flrise=%g hsrise=%g normhkVA=%g" + newline;
+            formatSpec = "emerghkVA=%g faultrate=%g flrise=%g hsrise=%g normhkVA=%g ";
             line4 = compose(formatSpec, obj.EmergMaxHkVA, obj.FaultRate, obj.FLrise, ...
                 obj.HSrise, obj.NormMaxHkVA);
             
-            formatSpec = "~Xhl=%g Xht=%g Xlt=%g thermal=%g n=%g m=%g ppm_antifloat=%f";
+            formatSpec = "Xhl=%g Xht=%g Xlt=%g thermal=%g n=%g m=%g ppm_antifloat=%f ";
             line5 = compose(formatSpec, obj.XHL, obj.XHT, obj.XLT, obj.ThermalTimeconst, ...
                 obj.n_thermal, obj.m_thermal, obj.ppm_FloatFactor);
                         
-            text = strcat(line1, line2, line3, line4, line5);
+            text = char(strcat(line1, line2, line3, line4, line5));
         end
     end % of regular methods
     

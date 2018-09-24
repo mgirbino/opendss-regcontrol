@@ -9,7 +9,7 @@ import RegControlPkg.RegControlObj;
 
 if DSSStartOK
     a = 'DSS Started';
-    formatSpec = string('Compile (%s\\IEEE13Nodeckt.dss)');
+    formatSpec = string('Compile (%s\\IEEE13Nodeckt_noreg.dss)');
     dirCommand = compose(formatSpec, pwd);
     DSSText.command = char(dirCommand);
     % Set up the interface variables
@@ -23,8 +23,8 @@ end
 disp(a)
 
 %% Initializing Transformers and adding to script:
-Reg1 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
-    "buses", ["650.1", "RG60.1"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
+Reg1 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+    'buses', ["650.1", "RG60.1"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
 Reg2 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
     "buses", ["650.2", "RG60.2"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
@@ -32,7 +32,14 @@ Reg2 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 
 Reg3 = TransformerObj("fNphases", 1, "bank", "reg1", "XHL", 0.01, "kVAs", [1666 1666], ...
     "buses", ["650.3", "RG60.3"], "kVs", [2.4 2.4], "pctLoadLoss", 0.01);
 
+% placing transformer phases into script:
+% text = "New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01";
+% 
+% DSSText.command = char(text);
 
+DSSText.command = Reg1.DSSCommand;
+DSSText.command = Reg2.DSSCommand;
+DSSText.command = Reg3.DSSCommand;
 
 %% Data sharing between OpenDSS and Matlab workspace:
 
