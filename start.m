@@ -41,6 +41,38 @@ DSSText.command = Reg1.DSSCommand;
 DSSText.command = Reg2.DSSCommand;
 DSSText.command = Reg3.DSSCommand;
 
+%% Running through OpenDSS Transformers:
+DSSTransf = DSSCircuit.Transformers;
+iTransf = DSSTransf.First;
+
+xsfdata = "";
+while iTransf > 0
+    xsfdata = xsfdata + string(DSSTransf.Name) + newline;
+    for ii = 1:DSSTransf.NumWindings
+        DSSTransf.Wdg = ii;
+        xsfdata = xsfdata + string(ii) + " IsDelta: " + string(DSSTransf.IsDelta) + newline;
+        xsfdata = xsfdata + string(ii) + " kV: " + string(DSSTransf.kV) + newline;
+        xsfdata = xsfdata + string(ii) + " kVA: " + string(DSSTransf.kva) + newline;
+        xsfdata = xsfdata + string(ii) + " MaxTap: " + string(DSSTransf.MaxTap) + newline;
+        xsfdata = xsfdata + string(ii) + " MinTap: " + string(DSSTransf.MinTap) + newline;
+        xsfdata = xsfdata + string(ii) + " NumTaps: " + string(DSSTransf.NumTaps) + newline;
+        xsfdata = xsfdata + string(ii) + " Current Tap: " + string(DSSTransf.Tap) + newline;
+        xsfdata = xsfdata + string(ii) + " R: " + string(DSSTransf.R) + newline;
+        xsfdata = xsfdata + string(ii) + " Rneut: " + string(DSSTransf.Rneut) + newline;
+    end    
+    xsfdata = xsfdata + "Xhl: " + string(DSSTransf.Xhl) + newline;
+    xsfdata = xsfdata + "Xht: " + string(DSSTransf.Xht) + newline;
+    xsfdata = xsfdata + "Xlt: " + string(DSSTransf.Xlt) + newline;
+    xsfdata = xsfdata + "Xneut: " + string(DSSTransf.Xneut) + newline + newline;
+    
+    iTransf = DSSTransf.Next;
+end
+
+%% Using plain text commands for comparison purposes:
+DSSText.Command = 'New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01 Xht=0.35 Xlt=0.3';
+DSSText.Command = 'New Transformer.Reg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01';
+DSSText.Command = 'New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01';
+
 %% Data sharing between OpenDSS and Matlab workspace:
 
 DSSCircuit.SetActiveElement('Transformer.Reg1');
