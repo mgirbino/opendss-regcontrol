@@ -23,29 +23,29 @@ end
 disp(a)
 
 %% Initializing Transformers and adding to script:
-Reg1 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+TReg1 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.1", "RG60.1"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-Reg2 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+TReg2 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.2", "RG60.2"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-Reg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+TReg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.3", "RG60.3"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-RCReg1 = RegControlObj('ElementName', "Reg1", 'xsfWinding', 2, 'Vreg', 122, ...
+RCReg1 = RegControlObj('ElementName', "TReg1", 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg2 = RegControlObj('ElementName', "Reg2", 'xsfWinding', 2, 'Vreg', 122, ...
+RCReg2 = RegControlObj('ElementName', "TReg2", 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg3 = RegControlObj('ElementName', "Reg3", 'xsfWinding', 2, 'Vreg', 122, ...
+RCReg3 = RegControlObj('ElementName', "TReg3", 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
 % new regcontrol.Reg1  transformer=Reg1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9 !maxtapchange=1
 
-DSSText.command = Reg1.DSSCommand;
-DSSText.command = Reg2.DSSCommand;
-DSSText.command = Reg3.DSSCommand;
+DSSText.command = TReg1.DSSCommand;
+DSSText.command = TReg2.DSSCommand;
+DSSText.command = TReg3.DSSCommand;
 
 %% Running through OpenDSS Transformers:
 DSSTransf = DSSCircuit.Transformers;
@@ -75,21 +75,60 @@ while iTransf > 0
 end
 
 %% Using plain text commands for comparison purposes:
-DSSText.Command = 'New Transformer.Reg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01 Xht=0.35 Xlt=0.3';
-DSSText.Command = 'New Transformer.Reg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01';
-DSSText.Command = 'New Transformer.Reg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01';
+DSSText.Command = 'New Transformer.TReg1 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.1 RG60.1] kVs=[2.4  2.4] %LoadLoss=0.01 Xht=0.35 Xlt=0.3';
+DSSText.Command = 'New Transformer.TReg2 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.2 RG60.2] kVs=[2.4  2.4] %LoadLoss=0.01';
+DSSText.Command = 'New Transformer.TReg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 1666] Buses=[650.3 RG60.3] kVs=[2.4  2.4] %LoadLoss=0.01';
 
 %% Data sharing 2.0:
-DSSCircuit.SetActiveElement('Transformer.Reg1');
+DSSCircuit.SetActiveElement('Transformer.TReg1');
 xfm1 = DSSCircuit.ActiveCktElement;
 
 Reg1v = Simulink.Parameter;
 Reg1v.DataType = 'double';
-Reg1v.Value = xfm1.Voltages; % 1 x 4 : [re_in im_in re_out im_out]
+Reg1v.Value = 1;%xfm1.Voltages; % 1 x 4 : [re_in im_in re_out im_out]
 
 Reg1i = Simulink.Parameter;
 Reg1i.DataType = 'double';
-Reg1i.Value = xfm1.Currents;
+Reg1i.Value = 2;%xfm1.Currents; % 1 x 4 : [re_in im_in re_out im_out]
+
+% setting up 2 buses:
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'RCReg1';
+EquipElems(1).Dimensions = 1;
+EquipElems(1).DimensionsMode = 'Fixed';
+EquipElems(1).DataType = 'RegControlObj';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
+
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'TReg1';
+EquipElems(2).Dimensions = 1;
+EquipElems(2).DimensionsMode = 'Fixed';
+EquipElems(2).DataType = 'TransformerObj';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'real';
+
+SignalElems(1) = Simulink.BusElement;
+SignalElems(1).Name = 'Reg1v';
+SignalElems(1).Dimensions = 4;
+SignalElems(1).DimensionsMode = 'Fixed';
+SignalElems(1).DataType = 'double';
+SignalElems(1).SampleTime = -1;
+SignalElems(1).Complexity = 'real';
+
+SignalElems(2) = Simulink.BusElement;
+SignalElems(2).Name = 'Reg1i';
+SignalElems(2).Dimensions = 4;
+SignalElems(2).DimensionsMode = 'Fixed';
+SignalElems(2).DataType = 'double';
+SignalElems(2).SampleTime = -1;
+SignalElems(2).Complexity = 'real';
+
+EquipmentBus = Simulink.Bus;
+EquipmentBus.Elements = EquipElems;
+
+SignalBus = Simulink.Bus;
+SignalBus.Elements = SignalElems;
 
 %% Data sharing between OpenDSS and Matlab workspace:
 
@@ -212,158 +251,158 @@ BandWidth = Simulink.Parameter;
 BandWidth.DataType = 'double';
 BandWidth.Value = 3.0;
 
-elems(1) = Simulink.BusElement;
-elems(1).Name = 'BandWidth';
-elems(1).Dimensions = 1;
-elems(1).DimensionsMode = 'Fixed';
-elems(1).DataType = 'double';
-elems(1).SampleTime = -1;
-elems(1).Complexity = 'real';
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'BandWidth';
+EquipElems(1).Dimensions = 1;
+EquipElems(1).DimensionsMode = 'Fixed';
+EquipElems(1).DataType = 'double';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
 
 UsingRegulatedBus = Simulink.Parameter;
 UsingRegulatedBus.DataType = 'boolean';
 UsingRegulatedBus.Value = false;
 
-elems(2) = Simulink.BusElement;
-elems(2).Name = 'UsingRegulatedBus';
-elems(2).Dimensions = 1;
-elems(2).DimensionsMode = 'Fixed';
-elems(2).DataType = 'boolean';
-elems(2).SampleTime = -1;
-elems(2).Complexity = 'real';
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'UsingRegulatedBus';
+EquipElems(2).Dimensions = 1;
+EquipElems(2).DimensionsMode = 'Fixed';
+EquipElems(2).DataType = 'boolean';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'real';
 
 CogenEnabled = Simulink.Parameter;
 CogenEnabled.DataType = 'boolean';
 CogenEnabled.Value = false;
 
-elems(3) = Simulink.BusElement;
-elems(3).Name = 'CogenEnabled';
-elems(3).Dimensions = 1;
-elems(3).DimensionsMode = 'Fixed';
-elems(3).DataType = 'boolean';
-elems(3).SampleTime = -1;
-elems(3).Complexity = 'real';
+EquipElems(3) = Simulink.BusElement;
+EquipElems(3).Name = 'CogenEnabled';
+EquipElems(3).Dimensions = 1;
+EquipElems(3).DimensionsMode = 'Fixed';
+EquipElems(3).DataType = 'boolean';
+EquipElems(3).SampleTime = -1;
+EquipElems(3).Complexity = 'real';
 
 LDC_Z = Simulink.Parameter;
 LDC_Z.DataType = 'double';
 LDC_Z.Value = 0; % verify
 
-elems(4) = Simulink.BusElement;
-elems(4).Name = 'LDC_Z';
-elems(4).Dimensions = 1;
-elems(4).DimensionsMode = 'Fixed';
-elems(4).DataType = 'double';
-elems(4).SampleTime = -1;
-elems(4).Complexity = 'real';
+EquipElems(4) = Simulink.BusElement;
+EquipElems(4).Name = 'LDC_Z';
+EquipElems(4).Dimensions = 1;
+EquipElems(4).DimensionsMode = 'Fixed';
+EquipElems(4).DataType = 'double';
+EquipElems(4).SampleTime = -1;
+EquipElems(4).Complexity = 'real';
 
 TapLimitPerChange = Simulink.Parameter;
 TapLimitPerChange.DataType = 'uint8';
 TapLimitPerChange.Value = 16;
 
-elems(5) = Simulink.BusElement;
-elems(5).Name = 'TapLimitPerChange';
-elems(5).Dimensions = 1;
-elems(5).DimensionsMode = 'Fixed';
-elems(5).DataType = 'uint8';
-elems(5).SampleTime = -1;
-elems(5).Complexity = 'real';
+EquipElems(5) = Simulink.BusElement;
+EquipElems(5).Name = 'TapLimitPerChange';
+EquipElems(5).Dimensions = 1;
+EquipElems(5).DimensionsMode = 'Fixed';
+EquipElems(5).DataType = 'uint8';
+EquipElems(5).SampleTime = -1;
+EquipElems(5).Complexity = 'real';
 
 PTratio = Simulink.Parameter;
 PTratio.DataType = 'double';
 PTratio.Value = 60;
 
-elems(6) = Simulink.BusElement;
-elems(6).Name = 'PTratio';
-elems(6).Dimensions = 1;
-elems(6).DimensionsMode = 'Fixed';
-elems(6).DataType = 'double';
-elems(6).SampleTime = -1;
-elems(6).Complexity = 'real';
+EquipElems(6) = Simulink.BusElement;
+EquipElems(6).Name = 'PTratio';
+EquipElems(6).Dimensions = 1;
+EquipElems(6).DimensionsMode = 'Fixed';
+EquipElems(6).DataType = 'double';
+EquipElems(6).SampleTime = -1;
+EquipElems(6).Complexity = 'real';
 
 RevBand = Simulink.Parameter;
 RevBand.DataType = 'double';
 RevBand.Value = 0; % verify
 
-elems(7) = Simulink.BusElement;
-elems(7).Name = 'RevBand';
-elems(7).Dimensions = 1;
-elems(7).DimensionsMode = 'Fixed';
-elems(7).DataType = 'double';
-elems(7).SampleTime = -1;
-elems(7).Complexity = 'real';
+EquipElems(7) = Simulink.BusElement;
+EquipElems(7).Name = 'RevBand';
+EquipElems(7).Dimensions = 1;
+EquipElems(7).DimensionsMode = 'Fixed';
+EquipElems(7).DataType = 'double';
+EquipElems(7).SampleTime = -1;
+EquipElems(7).Complexity = 'real';
 
 IsReversible = Simulink.Parameter;
 IsReversible.DataType = 'boolean';
 IsReversible.Value = false;
 
-elems(8) = Simulink.BusElement;
-elems(8).Name = 'IsReversible';
-elems(8).Dimensions = 1;
-elems(8).DimensionsMode = 'Fixed';
-elems(8).DataType = 'boolean';
-elems(8).SampleTime = -1;
-elems(8).Complexity = 'real';
+EquipElems(8) = Simulink.BusElement;
+EquipElems(8).Name = 'IsReversible';
+EquipElems(8).Dimensions = 1;
+EquipElems(8).DimensionsMode = 'Fixed';
+EquipElems(8).DataType = 'boolean';
+EquipElems(8).SampleTime = -1;
+EquipElems(8).Complexity = 'real';
 
 RevVreg = Simulink.Parameter;
 RevVreg.DataType = 'double';
 RevVreg.Value = 0; % verify
 
-elems(9) = Simulink.BusElement;
-elems(9).Name = 'RevVreg';
-elems(9).Dimensions = 1;
-elems(9).DimensionsMode = 'Fixed';
-elems(9).DataType = 'double';
-elems(9).SampleTime = -1;
-elems(9).Complexity = 'real';
+EquipElems(9) = Simulink.BusElement;
+EquipElems(9).Name = 'RevVreg';
+EquipElems(9).Dimensions = 1;
+EquipElems(9).DimensionsMode = 'Fixed';
+EquipElems(9).DataType = 'double';
+EquipElems(9).SampleTime = -1;
+EquipElems(9).Complexity = 'real';
 
 Vlimit = Simulink.Parameter;
 Vlimit.DataType = 'double';
 Vlimit.Value = 0; % verify
 
-elems(10) = Simulink.BusElement;
-elems(10).Name = 'Vlimit';
-elems(10).Dimensions = 1;
-elems(10).DimensionsMode = 'Fixed';
-elems(10).DataType = 'double';
-elems(10).SampleTime = -1;
-elems(10).Complexity = 'real';
+EquipElems(10) = Simulink.BusElement;
+EquipElems(10).Name = 'Vlimit';
+EquipElems(10).Dimensions = 1;
+EquipElems(10).DimensionsMode = 'Fixed';
+EquipElems(10).DataType = 'double';
+EquipElems(10).SampleTime = -1;
+EquipElems(10).Complexity = 'real';
 
 Vreg = Simulink.Parameter;
 Vreg.DataType = 'double';
 Vreg.Value = 120;
 
-elems(11) = Simulink.BusElement;
-elems(11).Name = 'Vreg';
-elems(11).Dimensions = 1;
-elems(11).DimensionsMode = 'Fixed';
-elems(11).DataType = 'double';
-elems(11).SampleTime = -1;
-elems(11).Complexity = 'real';
+EquipElems(11) = Simulink.BusElement;
+EquipElems(11).Name = 'Vreg';
+EquipElems(11).Dimensions = 1;
+EquipElems(11).DimensionsMode = 'Fixed';
+EquipElems(11).DataType = 'double';
+EquipElems(11).SampleTime = -1;
+EquipElems(11).Complexity = 'real';
 
 % signals, only changed outside of state machine:
 FwdPower = Simulink.Signal;
 FwdPower.DataType = 'double';
 % FwdPower.InitialValue = 0;
 
-elems(12) = Simulink.BusElement;
-elems(12).Name = 'FwdPower';
-elems(12).Dimensions = 1;
-elems(12).DimensionsMode = 'Fixed';
-elems(12).DataType = 'double';
-elems(12).SampleTime = -1;
-elems(12).Complexity = 'real';
+EquipElems(12) = Simulink.BusElement;
+EquipElems(12).Name = 'FwdPower';
+EquipElems(12).Dimensions = 1;
+EquipElems(12).DimensionsMode = 'Fixed';
+EquipElems(12).DataType = 'double';
+EquipElems(12).SampleTime = -1;
+EquipElems(12).Complexity = 'real';
 
 ILDC = Simulink.Signal;
 ILDC.DataType = 'double';
 % ILDC.InitialValue = 0;
 
-elems(13) = Simulink.BusElement;
-elems(13).Name = 'ILDC';
-elems(13).Dimensions = 1;
-elems(13).DimensionsMode = 'Fixed';
-elems(13).DataType = 'double';
-elems(13).SampleTime = -1;
-elems(13).Complexity = 'real';
+EquipElems(13) = Simulink.BusElement;
+EquipElems(13).Name = 'ILDC';
+EquipElems(13).Dimensions = 1;
+EquipElems(13).DimensionsMode = 'Fixed';
+EquipElems(13).DataType = 'double';
+EquipElems(13).SampleTime = -1;
+EquipElems(13).Complexity = 'real';
 
 % Information about transformer (parameters and signals):
 
@@ -371,45 +410,45 @@ WindingConnections = Simulink.Parameter;
 WindingConnections.DataType = 'uint8';
 WindingConnections.Value = [Connections.DELTA Connections.WYE];
 
-CTelems(1) = Simulink.BusElement;
-CTelems(1).Name = 'WindingConnections';
-CTelems(1).Dimensions = 1;
-CTelems(1).DimensionsMode = 'Variable';
-CTelems(1).DataType = 'uint8';
-CTelems(1).SampleTime = -1;
-CTelems(1).Complexity = 'real';
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'WindingConnections';
+EquipElems(1).Dimensions = 1;
+EquipElems(1).DimensionsMode = 'Variable';
+EquipElems(1).DataType = 'uint8';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
 
 WindingVoltages = Simulink.Signal;
 WindingVoltages.DataType = 'double';
 %WindingVoltages.Value = [100 100];
 
-CTelems(2) = Simulink.BusElement;
-CTelems(2).Name = 'WindingVoltages';
-CTelems(2).Dimensions = 1;
-CTelems(2).DimensionsMode = 'Variable';
-CTelems(2).DataType = 'double';
-CTelems(2).SampleTime = -1;
-CTelems(2).Complexity = 'complex';
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'WindingVoltages';
+EquipElems(2).Dimensions = 1;
+EquipElems(2).DimensionsMode = 'Variable';
+EquipElems(2).DataType = 'double';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'complex';
 
 BaseVoltage = Simulink.Parameter;
 BaseVoltage.DataType = 'double';
 BaseVoltage.Value = [100 100]; % change
 
-CTelems(3) = Simulink.BusElement;
-CTelems(3).Name = 'BaseVoltage';
-CTelems(3).Dimensions = 1;
-CTelems(3).DimensionsMode = 'Variable';
-CTelems(3).DataType = 'double';
-CTelems(3).SampleTime = -1;
-CTelems(3).Complexity = 'real';
+EquipElems(3) = Simulink.BusElement;
+EquipElems(3).Name = 'BaseVoltage';
+EquipElems(3).Dimensions = 1;
+EquipElems(3).DimensionsMode = 'Variable';
+EquipElems(3).DataType = 'double';
+EquipElems(3).SampleTime = -1;
+EquipElems(3).Complexity = 'real';
 
-elems(14) = Simulink.BusElement;
-elems(14).Name = 'ControlledTransformer';
-elems(14).Dimensions = 1;
-elems(14).DimensionsMode = 'Fixed';
-elems(14).DataType = 'Bus';
-elems(14).SampleTime = -1;
-elems(14).Complexity = 'complex';
+EquipElems(14) = Simulink.BusElement;
+EquipElems(14).Name = 'ControlledTransformer';
+EquipElems(14).Dimensions = 1;
+EquipElems(14).DimensionsMode = 'Fixed';
+EquipElems(14).DataType = 'Bus';
+EquipElems(14).SampleTime = -1;
+EquipElems(14).Complexity = 'complex';
 
 % TapDelay
 
@@ -449,10 +488,10 @@ outportHandle = portHandles.Outport;
 %% Buses:
 
 ControlledTransformer = Simulink.Bus;
-ControlledTransformer.Elements = CTelems;
+ControlledTransformer.Elements = EquipElems;
 
 InputsBus = Simulink.Bus;
-InputsBus.Elements = elems;
+InputsBus.Elements = EquipElems;
 
 % % Specify the programmatic port parameter 'Name'.
 % set_param(outportHandle,'state','RevBand')
