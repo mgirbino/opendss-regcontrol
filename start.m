@@ -32,14 +32,14 @@ TReg2 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666
 TReg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.3", "RG60.3"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
-RCReg1 = RegControlObj('ElementName', "TReg1", 'xsfWinding', 2, 'Vreg', 122, ...
-    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+RCReg1 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg2 = RegControlObj('ElementName', "TReg2", 'xsfWinding', 2, 'Vreg', 122, ...
-    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+RCReg2 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg3 = RegControlObj('ElementName', "TReg3", 'xsfWinding', 2, 'Vreg', 122, ...
-    'Bandwidth', 2, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+RCReg3 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
 % new regcontrol.Reg1  transformer=Reg1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9 !maxtapchange=1
 
@@ -82,6 +82,22 @@ DSSText.Command = 'New Transformer.TReg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 
 %% Data sharing 2.0:
 DSSCircuit.SetActiveElement('Transformer.TReg1');
 xfm1 = DSSCircuit.ActiveCktElement;
+
+VBuffer = xfm1.Voltages; % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
+CBuffer = xfm1.Currents;
+
+VBMA = xfm1.VoltagesMagAng; % [in ... | out ...]; [1 2], [3 4] = [mag ang], [mag ang]
+CBMA = xfm1.CurrentsMagAng;
+
+PBuffer = xfm1.Powers;
+
+% reading I from current transformer;
+% getting to a single phase by its element terminal (quantized by number
+% of conductors) + the phase of that element;
+% using 1-indexing (Matlab)
+ILDC = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledPhase - 1) / RCReg1.CTRating;
+
+%% Data packaging for Simulink:
 
 Reg1v = Simulink.Parameter;
 Reg1v.DataType = 'double';

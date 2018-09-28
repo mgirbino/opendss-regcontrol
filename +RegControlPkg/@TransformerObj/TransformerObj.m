@@ -10,6 +10,10 @@ classdef TransformerObj < Simulink.Parameter
         XHLChanged
     end
     
+    properties (Access = private)
+        xsfName@string
+    end
+    
     properties
         bank@string % name
         buses@string % vector of bus names
@@ -287,6 +291,8 @@ classdef TransformerObj < Simulink.Parameter
             
             obj.bank = p.Results.bank;
             obj.buses = p.Results.buses;
+            
+            obj.xsfName = string.empty;
         end
         
         function [obj, RotatedPhase] = RotatePhases(obj, IndicatedPhase)
@@ -379,6 +385,14 @@ classdef TransformerObj < Simulink.Parameter
                     obj.Winding(TapIndex).puTap = TempVal;
                 end
             end
+        end
+        
+        function name = getName(obj)
+            if isempty(obj.xsfName)
+                tempName = evalin('caller','inputname(1)');
+                obj.xsfName = string(tempName);
+            end
+            name = obj.xsfName;
         end
 
         function text = DSSCommand(obj)

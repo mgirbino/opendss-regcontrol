@@ -92,6 +92,14 @@ end
 
 DSSText.Command = 'Show Eventlog';
 
+%% Interaction
+DSSCircuit.SetActiveElement('Transformer.sub');
+xfm1 = DSSCircuit.ActiveCktElement;
+
+VBuffer = (xfm1.Voltages)';
+CBuffer = (xfm1.Currents)';
+
+
 %% Show plots
 
 DSSText.Command = 'Summary';  %show solution summary

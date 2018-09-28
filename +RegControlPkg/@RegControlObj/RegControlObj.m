@@ -90,7 +90,7 @@ classdef RegControlObj < Simulink.Parameter
         fInverseTime
             
         % private to control logic:
-%         UsingRegulatedBus
+        UsingRegulatedBus
 %         VlimitActive
 %         Armed
 %         TapChangeIsNeeded
@@ -103,9 +103,8 @@ classdef RegControlObj < Simulink.Parameter
         RegulatedBus@string
     end
     
-    % will probably make into its own bus:
 %     properties
-%         ControlledElement = Transformer;
+%         ControlledElement = RegControlPkg.Transformer;
 %     end
     
     methods
@@ -114,10 +113,12 @@ classdef RegControlObj < Simulink.Parameter
             numchk = {'numeric'};
             boolchk = {'boolean'};
             strchk = {'string'};
-            % xsfrmrchk = {'TransformerObj'};
+            xsfrmrchk = {'RegControlPkg.TransformerObj', 'TransformerObj'};
             
             nempty = {'nonempty'};
             posint = {'nonempty','integer','positive'};
+            
+%             addRequired(p,'ControlledElement',@(x)validateattributes(x,xsfrmrchk,nempty));
             
             % doubles:
             addOptional(p,'Bandwidth',3.0,@(x)validateattributes(x,numchk,nempty));
@@ -169,8 +170,6 @@ classdef RegControlObj < Simulink.Parameter
             addOptional(p,'ElementName',string(""),@(x)validateattributes(x,strchk,nempty));
             addOptional(p,'RegulatedBus',string(""),@(x)validateattributes(x,strchk,nempty));
 
-            % transformer:
-            % addOptional(p,'Transformer',TransformerObj,@(x)validateattributes(x,xsfrmrchk,nempty));
             parse(p,varargin{:});
             
             obj.Bandwidth = p.Results.Bandwidth;
@@ -219,7 +218,19 @@ classdef RegControlObj < Simulink.Parameter
             obj.ElementName = p.Results.ElementName;
             obj.RegulatedBus = p.Results.RegulatedBus;
             
-            % obj.Transformer = p.Results.Transformer;
+            if obj.RegulatedBus == ""
+                obj.UsingRegulatedBus = false;
+            else % Regulated bus specified
+                obj.UsingRegulatedBus = true;
+            end
+            
+            % copy values from Transformer, then delete transformer
+            % because it is redundant:
+%             TempControlledElement = p.Results.Transformer;
+%             obj.fNphases = TempControlledElement.fNphases;
+%             obj.fNconds = TempControlledElement.fNconds;
+%             obj.fNterms = TempControlledElement.fNterms;
+%             obj.ElementName = TempControlledElement.getName;
         end
         
         function text = DSSCommand(obj)
