@@ -83,19 +83,26 @@ DSSText.Command = 'New Transformer.TReg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 
 DSSCircuit.SetActiveElement('Transformer.TReg1');
 xfm1 = DSSCircuit.ActiveCktElement;
 
-VBuffer = xfm1.Voltages; % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
-CBuffer = xfm1.Currents;
+VBuffer = MakeComplex(xfm1.Voltages); % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
+CBuffer = MakeComplex(xfm1.Currents);
 
 VBMA = xfm1.VoltagesMagAng; % [in ... | out ...]; [1 2], [3 4] = [mag ang], [mag ang]
 CBMA = xfm1.CurrentsMagAng;
 
-PBuffer = xfm1.Powers;
+PBuffer = MakeComplex(xfm1.Powers);
 
 % reading I from current transformer;
 % getting to a single phase by its element terminal (quantized by number
 % of conductors) + the phase of that element;
 % using 1-indexing (Matlab)
 ILDC = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledPhase - 1) / RCReg1.CTRating;
+%% When using Regulated Bus (RegControl affects voltage at separate bus):
+DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
+RegulatedBus = DSSCircuit.ActiveCktElement;
+
+VTerminal = MakeComplex(RegulatedBus.Voltages); % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
+% ...package into a parameter
+
 
 %% Data packaging for Simulink:
 
