@@ -83,13 +83,13 @@ DSSText.Command = 'New Transformer.TReg3 phases=1 bank=reg1 XHL=0.01 kVAs=[1666 
 DSSCircuit.SetActiveElement('Transformer.TReg1');
 xfm1 = DSSCircuit.ActiveCktElement;
 
-VBuffer = MakeComplex(xfm1.Voltages); % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
+ControlledTransformerVoltages = MakeComplex(xfm1.Voltages); % [in ... | out ...]; [1 2], [3 4] = [real imag], [real imag]
 CBuffer = MakeComplex(xfm1.Currents);
 
-VBMA = xfm1.VoltagesMagAng; % [in ... | out ...]; [1 2], [3 4] = [mag ang], [mag ang]
-CBMA = xfm1.CurrentsMagAng;
+% VBMA = xfm1.VoltagesMagAng; % [in ... | out ...]; [1 2], [3 4] = [mag ang], [mag ang]
+% CBMA = xfm1.CurrentsMagAng;
 
-PBuffer = MakeComplex(xfm1.Powers);
+ControlledTransformerPowers = MakeComplex(xfm1.Powers);
 
 % reading I from current transformer;
 % getting to a single phase by its element terminal (quantized by number
@@ -105,6 +105,99 @@ VTerminal = MakeComplex(RegulatedBus.Voltages); % [in ... | out ...]; [1 2], [3 
 
 
 %% Data packaging for Simulink:
+
+% ControlledTransformerVoltages
+% ControlledTransformerPowers
+% VTerminal
+% ILDC
+
+DSSCircuit.SetActiveElement('Transformer.TReg1');
+xfm1 = DSSCircuit.ActiveCktElement;
+
+ControlledTransformerVoltages = Simulink.Parameter;
+ControlledTransformerVoltages.DataType = 'double';
+ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
+% [in ... | out ...]' (complex)
+
+ControlledTransformerPowers = Simulink.Parameter;
+ControlledTransformerPowers.DataType = 'double';
+ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
+% [in ... | out ...]' (complex)
+
+DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
+RegulatedBus = DSSCircuit.ActiveCktElement;
+
+VTerminal = Simulink.Parameter;
+VTerminal.DataType = 'double';
+VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
+% [in ... | out ...]' (complex)
+
+CBuffer = MakeComplex(xfm1.Currents);
+
+ILDC = Simulink.Parameter;
+ILDC.DataType = 'double';
+ILDC.Value = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledPhase - 1) ...
+    / RCReg1.CTRating;
+% a complex scalar
+
+% setting up 2 buses:
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'RCReg1';
+EquipElems(1).Dimensions = 1;
+EquipElems(1).DimensionsMode = 'Fixed';
+EquipElems(1).DataType = 'RegControlObj';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
+
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'TReg1';
+EquipElems(2).Dimensions = 1;
+EquipElems(2).DimensionsMode = 'Fixed';
+EquipElems(2).DataType = 'TransformerObj';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'real';
+
+% -----
+
+SignalElems(1) = Simulink.BusElement;
+SignalElems(1).Name = 'ControlledTransformerVoltages';
+SignalElems(1).Dimensions = 4;
+SignalElems(1).DimensionsMode = 'Fixed';
+SignalElems(1).DataType = 'double';
+SignalElems(1).SampleTime = -1;
+SignalElems(1).Complexity = 'complex';
+
+SignalElems(2) = Simulink.BusElement;
+SignalElems(2).Name = 'ControlledTransformerPowers';
+SignalElems(2).Dimensions = 4;
+SignalElems(2).DimensionsMode = 'Fixed';
+SignalElems(2).DataType = 'double';
+SignalElems(2).SampleTime = -1;
+SignalElems(2).Complexity = 'complex';
+
+SignalElems(3) = Simulink.BusElement;
+SignalElems(3).Name = 'VTerminal';
+SignalElems(3).Dimensions = 4;
+SignalElems(3).DimensionsMode = 'Fixed';
+SignalElems(3).DataType = 'double';
+SignalElems(3).SampleTime = -1;
+SignalElems(3).Complexity = 'complex';
+
+SignalElems(4) = Simulink.BusElement;
+SignalElems(4).Name = 'ILDC';
+SignalElems(4).Dimensions = 1;
+SignalElems(4).DimensionsMode = 'Fixed';
+SignalElems(4).DataType = 'double';
+SignalElems(4).SampleTime = -1;
+SignalElems(4).Complexity = 'complex';
+
+EquipmentBus = Simulink.Bus;
+EquipmentBus.Elements = EquipElems;
+
+SignalBus = Simulink.Bus;
+SignalBus.Elements = SignalElems;
+
+%% Old data packaging:
 
 Reg1v = Simulink.Parameter;
 Reg1v.DataType = 'double';
