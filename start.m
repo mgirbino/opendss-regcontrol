@@ -4,6 +4,9 @@ import RegControlPkg.WindingObj;
 import RegControlPkg.TransformerObj;
 import RegControlPkg.RegControlObj;
 
+enumpath = strcat(pwd, '\enums');
+addpath(enumpath);
+
 % execute DSSStartup.m
 [DSSStartOK, DSSObj, DSSText] = DSSStartup;
 
@@ -35,10 +38,10 @@ TReg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666
 RCReg1 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg2 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+RCReg2 = RegControlObj('ElementName', TReg2.getName, 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
-RCReg3 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+RCReg3 = RegControlObj('ElementName', TReg3.getName, 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
 % new regcontrol.Reg1  transformer=Reg1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9 !maxtapchange=1
@@ -46,6 +49,80 @@ RCReg3 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 12
 DSSText.command = TReg1.DSSCommand;
 DSSText.command = TReg2.DSSCommand;
 DSSText.command = TReg3.DSSCommand;
+
+%% Run a Daily analysis and plot the voltages at the end of the feeder
+
+% Add loadshape:
+DSSText.Command = 'New LoadShape.LoadShape2a npts=96 interval=0.25';
+DSSCircuit.LoadShape.name = 'LoadShape2a';
+ls = csvread('LoadShape1.csv');
+feature('COM_SafeArraySingleDim',1);
+DSSCircuit.LoadShape.pmult =  ls;
+feature('COM_SafeArraySingleDim',0);
+
+% Apply loadshape to daily simulation:
+DSSLoads = DSSCircuit.Loads;
+iLoad = DSSLoads.First;
+while iLoad>0
+    DSSLoads.daily = 'LoadShape2a';
+    iLoad = DSSLoads.Next;
+end
+
+% Change regulators to 1 tap:
+DSSRegs = DSSCircuit.RegControls;
+iReg = DSSRegs.First;
+while iReg>0
+    DSSRegs.MaxTapChange = 1;
+    iReg = DSSRegs.Next;
+end
+
+% Place monitors:
+DSSText.Command = 'New monitor.FeederVoltageCurrent element=Line.650632 terminal=1 mode=0';
+DSSText.Command = 'New monitor.Tap1 element=Transformer.TReg1 terminal=2 mode=2';
+DSSText.Command = 'New monitor.Tap2 element=Transformer.TReg2 terminal=2 mode=2';
+DSSText.Command = 'New monitor.Tap3 element=Transformer.TReg3 terminal=2 mode=2';
+
+% Solve for a daily simulation:
+DSSText.Command = 'set mode=daily stepsize=15m number=96 controlmode=time';
+% number of solns to perform for Monte Carlo/daily load simulations
+DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
+
+CtrlOps = zeros(10,4,96);
+% run for 24 hours:
+for i=1:96 % 3rd dimension of Ctrl Ops := # time divisions
+    DSSSolution.SolveNoControl;
+    DSSSolution.SampleControlDevices;
+
+    len = DSSCircuit.CtrlQueue.QueueSize;
+    if len >= 1 % parse the Queue if it isn't empty
+        DSSText.Command = 'Show Control Queue'
+        CtrlQueueFile = 'C:\Users\Michael Girbino\Documents\13Node Matlab OpenDSS\IEEE13Nodeckt_ControlQueue.csv';  	
+        RawQueue = parseCSV(CtrlQueueFile);
+        
+        % CtrlOps(:,:,i) = [ Time | Handle | ActionCode | Device ]
+        CtrlOps(1:len,CtrlOpsFields.Time,i) = RawQueue{CtrlQueueFields.Hour}...
+            + RawQueue{CtrlQueueFields.Sec}/3600;
+        CtrlOps(1:len,CtrlOpsFields.Handle,i) = RawQueue{CtrlQueueFields.Handle};
+        CtrlOps(1:len,CtrlOpsFields.ActionCode,i) = RawQueue{CtrlQueueFields.ActionCode};
+        CtrlDev = erase(RawQueue{CtrlQueueFields.Device},' ');
+        for i = 1:size(CtrlDev,1)
+            switch string(CtrlDev(i,1))
+                case 'reg1'
+                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg1;
+                case 'reg2'
+                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg2;
+                case 'reg3'
+                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg3;
+            end
+        end
+    end
+    
+    DSSSolution.Solve;
+% 
+%     DSSText.Command='Buscoords Buscoords.dat   ! load in bus coordinates';
+end
+
+DSSText.Command = 'Show Eventlog';
 
 %% Running through OpenDSS Transformers:
 DSSTransf = DSSCircuit.Transformers;
@@ -140,25 +217,6 @@ ILDC.Value = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledP
     / RCReg1.CTRating;
 % a complex scalar
 
-% setting up 2 buses:
-EquipElems(1) = Simulink.BusElement;
-EquipElems(1).Name = 'RCReg1';
-EquipElems(1).Dimensions = 1;
-EquipElems(1).DimensionsMode = 'Fixed';
-EquipElems(1).DataType = 'RegControlObj';
-EquipElems(1).SampleTime = -1;
-EquipElems(1).Complexity = 'real';
-
-EquipElems(2) = Simulink.BusElement;
-EquipElems(2).Name = 'TReg1';
-EquipElems(2).Dimensions = 1;
-EquipElems(2).DimensionsMode = 'Fixed';
-EquipElems(2).DataType = 'TransformerObj';
-EquipElems(2).SampleTime = -1;
-EquipElems(2).Complexity = 'real';
-
-% -----
-
 SignalElems(1) = Simulink.BusElement;
 SignalElems(1).Name = 'ControlledTransformerVoltages';
 SignalElems(1).Dimensions = 4;
@@ -191,11 +249,258 @@ SignalElems(4).DataType = 'double';
 SignalElems(4).SampleTime = -1;
 SignalElems(4).Complexity = 'complex';
 
-EquipmentBus = Simulink.Bus;
-EquipmentBus.Elements = EquipElems;
-
 SignalBus = Simulink.Bus;
 SignalBus.Elements = SignalElems;
+
+% 2 buses for equipment:
+
+BandWidth = Simulink.Parameter;
+BandWidth.DataType = 'double';
+BandWidth.Value = RCReg1.Bandwidth; 
+
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'BandWidth';
+EquipElems(1).Dimensions = 1;
+EquipElems(1).DimensionsMode = 'Fixed';
+EquipElems(1).DataType = 'double';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
+
+UsingRegulatedBus = Simulink.Parameter;
+UsingRegulatedBus.DataType = 'boolean';
+UsingRegulatedBus.Value = RCReg1.UsingRegulatedBus; 
+
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'UsingRegulatedBus';
+EquipElems(2).Dimensions = 1;
+EquipElems(2).DimensionsMode = 'Fixed';
+EquipElems(2).DataType = 'boolean';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'real';
+
+CogenEnabled = Simulink.Parameter;
+CogenEnabled.DataType = 'boolean';
+CogenEnabled.Value = RCReg1.CogenEnabled; 
+
+EquipElems(3) = Simulink.BusElement;
+EquipElems(3).Name = 'CogenEnabled';
+EquipElems(3).Dimensions = 1;
+EquipElems(3).DimensionsMode = 'Fixed';
+EquipElems(3).DataType = 'boolean';
+EquipElems(3).SampleTime = -1;
+EquipElems(3).Complexity = 'real';
+
+LDC_Z = Simulink.Parameter;
+LDC_Z.DataType = 'double';
+LDC_Z.Value = RCReg1.LDC_Z; 
+
+EquipElems(4) = Simulink.BusElement;
+EquipElems(4).Name = 'LDC_Z';
+EquipElems(4).Dimensions = 1;
+EquipElems(4).DimensionsMode = 'Fixed';
+EquipElems(4).DataType = 'double';
+EquipElems(4).SampleTime = -1;
+EquipElems(4).Complexity = 'real';
+
+TapLimitPerChange = Simulink.Parameter;
+TapLimitPerChange.DataType = 'uint8';
+TapLimitPerChange.Value = RCReg1.TapLimitPerChange; 
+
+EquipElems(5) = Simulink.BusElement;
+EquipElems(5).Name = 'TapLimitPerChange';
+EquipElems(5).Dimensions = 1;
+EquipElems(5).DimensionsMode = 'Fixed';
+EquipElems(5).DataType = 'uint8';
+EquipElems(5).SampleTime = -1;
+EquipElems(5).Complexity = 'real';
+
+PTratio = Simulink.Parameter;
+PTratio.DataType = 'double';
+PTratio.Value = RCReg1.PTRatio; 
+
+EquipElems(6) = Simulink.BusElement;
+EquipElems(6).Name = 'PTratio';
+EquipElems(6).Dimensions = 1;
+EquipElems(6).DimensionsMode = 'Fixed';
+EquipElems(6).DataType = 'double';
+EquipElems(6).SampleTime = -1;
+EquipElems(6).Complexity = 'real';
+
+RevBand = Simulink.Parameter;
+RevBand.DataType = 'double';
+RevBand.Value = RCReg1.revBandwidth; 
+
+EquipElems(7) = Simulink.BusElement;
+EquipElems(7).Name = 'RevBand';
+EquipElems(7).Dimensions = 1;
+EquipElems(7).DimensionsMode = 'Fixed';
+EquipElems(7).DataType = 'double';
+EquipElems(7).SampleTime = -1;
+EquipElems(7).Complexity = 'real';
+
+RevDelay = Simulink.Parameter;
+RevDelay.DataType = 'double';
+RevDelay.Value = RCReg1.RevDelay; 
+
+EquipElems(8) = Simulink.BusElement;
+EquipElems(8).Name = 'RevDelay';
+EquipElems(8).Dimensions = 1;
+EquipElems(8).DimensionsMode = 'Fixed';
+EquipElems(8).DataType = 'double';
+EquipElems(8).SampleTime = -1;
+EquipElems(8).Complexity = 'real';
+
+IsReversible = Simulink.Parameter;
+IsReversible.DataType = 'boolean';
+IsReversible.Value = RCReg1.IsReversible; 
+
+EquipElems(9) = Simulink.BusElement;
+EquipElems(9).Name = 'IsReversible';
+EquipElems(9).Dimensions = 1;
+EquipElems(9).DimensionsMode = 'Fixed';
+EquipElems(9).DataType = 'boolean';
+EquipElems(9).SampleTime = -1;
+EquipElems(9).Complexity = 'real';
+
+RevVreg = Simulink.Parameter;
+RevVreg.DataType = 'double';
+RevVreg.Value = RCReg1.RevVreg; 
+
+EquipElems(10) = Simulink.BusElement;
+EquipElems(10).Name = 'RevVreg';
+EquipElems(10).Dimensions = 1;
+EquipElems(10).DimensionsMode = 'Fixed';
+EquipElems(10).DataType = 'double';
+EquipElems(10).SampleTime = -1;
+EquipElems(10).Complexity = 'real';
+
+RevPowerThreshold = Simulink.Parameter;
+RevPowerThreshold.DataType = 'double';
+RevPowerThreshold.Value = RCReg1.revPowerThreshold; 
+
+EquipElems(11) = Simulink.BusElement;
+EquipElems(11).Name = 'RevPowerThreshold';
+EquipElems(11).Dimensions = 1;
+EquipElems(11).DimensionsMode = 'Fixed';
+EquipElems(11).DataType = 'double';
+EquipElems(11).SampleTime = -1;
+EquipElems(11).Complexity = 'real';
+
+Vlimit = Simulink.Parameter;
+Vlimit.DataType = 'double';
+Vlimit.Value = RCReg1.Vlimit; 
+
+EquipElems(12) = Simulink.BusElement;
+EquipElems(12).Name = 'Vlimit';
+EquipElems(12).Dimensions = 1;
+EquipElems(12).DimensionsMode = 'Fixed';
+EquipElems(12).DataType = 'double';
+EquipElems(12).SampleTime = -1;
+EquipElems(12).Complexity = 'real';
+
+Vreg = Simulink.Parameter;
+Vreg.DataType = 'double';
+Vreg.Value = RCReg1.Vreg; 
+
+EquipElems(13) = Simulink.BusElement;
+EquipElems(13).Name = 'Vreg';
+EquipElems(13).Dimensions = 1;
+EquipElems(13).DimensionsMode = 'Fixed';
+EquipElems(13).DataType = 'double';
+EquipElems(13).SampleTime = -1;
+EquipElems(13).Complexity = 'real';
+
+TapDelay = Simulink.Parameter;
+TapDelay.DataType = 'double';
+TapDelay.Value = RCReg1.TapDelay; 
+
+EquipElems(14) = Simulink.BusElement;
+EquipElems(14).Name = 'TapDelay';
+EquipElems(14).Dimensions = 1;
+EquipElems(14).DimensionsMode = 'Fixed';
+EquipElems(14).DataType = 'double';
+EquipElems(14).SampleTime = -1;
+EquipElems(14).Complexity = 'real';
+
+TapWinding = Simulink.Parameter;
+TapWinding.DataType = 'uint8';
+TapWinding.Value = RCReg1.xsfWinding; 
+
+EquipElems(15) = Simulink.BusElement;
+EquipElems(15).Name = 'TapWinding';
+EquipElems(15).Dimensions = 1;
+EquipElems(15).DimensionsMode = 'Fixed';
+EquipElems(15).DataType = 'uint8';
+EquipElems(15).SampleTime = -1;
+EquipElems(15).Complexity = 'real';
+
+%----
+
+tw = TapWinding.Value;
+
+MinTap = Simulink.Parameter;
+MinTap.DataType = 'double';
+MinTap.Value = TReg1.Winding(tw).MinTap; 
+
+EquipElems(16) = Simulink.BusElement;
+EquipElems(16).Name = 'MinTap';
+EquipElems(16).Dimensions = 1;
+EquipElems(16).DimensionsMode = 'Fixed';
+EquipElems(16).DataType = 'double';
+EquipElems(16).SampleTime = -1;
+EquipElems(16).Complexity = 'real';
+
+MaxTap = Simulink.Parameter;
+MaxTap.DataType = 'double';
+MaxTap.Value = TReg1.Winding(tw).MaxTap; 
+
+EquipElems(17) = Simulink.BusElement;
+EquipElems(17).Name = 'MaxTap';
+EquipElems(17).Dimensions = 1;
+EquipElems(17).DimensionsMode = 'Fixed';
+EquipElems(17).DataType = 'double';
+EquipElems(17).SampleTime = -1;
+EquipElems(17).Complexity = 'real';
+
+TapIncrement = Simulink.Parameter;
+TapIncrement.DataType = 'double';
+TapIncrement.Value = TReg1.Winding(tw).TapIncrement;
+
+EquipElems(18) = Simulink.BusElement;
+EquipElems(18).Name = 'TapIncrement';
+EquipElems(18).Dimensions = 1;
+EquipElems(18).DimensionsMode = 'Fixed';
+EquipElems(18).DataType = 'double';
+EquipElems(18).SampleTime = -1;
+EquipElems(18).Complexity = 'real';
+
+ControlledTransformerConnection = Simulink.Parameter;
+ControlledTransformerConnection.DataType = 'uint8';
+ControlledTransformerConnection.Value = ...
+    TReg1.Winding(tw).Connection; 
+
+EquipElems(19) = Simulink.BusElement;
+EquipElems(19).Name = 'ControlledTransformerConnection';
+EquipElems(19).Dimensions = 1;
+EquipElems(19).DimensionsMode = 'Fixed';
+EquipElems(19).DataType = 'uint8';
+EquipElems(19).SampleTime = -1;
+EquipElems(19).Complexity = 'real';
+
+BaseVoltage = Simulink.Parameter;
+BaseVoltage.DataType = 'double';
+BaseVoltage.Value = TReg1.Winding(tw).Vbase; 
+
+EquipElems(20) = Simulink.BusElement;
+EquipElems(20).Name = 'BaseVoltage';
+EquipElems(20).Dimensions = 1;
+EquipElems(20).DimensionsMode = 'Fixed';
+EquipElems(20).DataType = 'double';
+EquipElems(20).SampleTime = -1;
+EquipElems(20).Complexity = 'real';
+
+EquipmentBus = Simulink.Bus;
+EquipmentBus.Elements = EquipElems;
 
 %% Old data packaging:
 
@@ -224,27 +529,27 @@ EquipElems(2).DataType = 'TransformerObj';
 EquipElems(2).SampleTime = -1;
 EquipElems(2).Complexity = 'real';
 
-SignalElems(1) = Simulink.BusElement;
-SignalElems(1).Name = 'Reg1v';
-SignalElems(1).Dimensions = 4;
-SignalElems(1).DimensionsMode = 'Fixed';
-SignalElems(1).DataType = 'double';
-SignalElems(1).SampleTime = -1;
-SignalElems(1).Complexity = 'real';
+EquipElems(1) = Simulink.BusElement;
+EquipElems(1).Name = 'Reg1v';
+EquipElems(1).Dimensions = 4;
+EquipElems(1).DimensionsMode = 'Fixed';
+EquipElems(1).DataType = 'double';
+EquipElems(1).SampleTime = -1;
+EquipElems(1).Complexity = 'real';
 
-SignalElems(2) = Simulink.BusElement;
-SignalElems(2).Name = 'Reg1i';
-SignalElems(2).Dimensions = 4;
-SignalElems(2).DimensionsMode = 'Fixed';
-SignalElems(2).DataType = 'double';
-SignalElems(2).SampleTime = -1;
-SignalElems(2).Complexity = 'real';
+EquipElems(2) = Simulink.BusElement;
+EquipElems(2).Name = 'Reg1i';
+EquipElems(2).Dimensions = 4;
+EquipElems(2).DimensionsMode = 'Fixed';
+EquipElems(2).DataType = 'double';
+EquipElems(2).SampleTime = -1;
+EquipElems(2).Complexity = 'real';
 
 EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
 
 SignalBus = Simulink.Bus;
-SignalBus.Elements = SignalElems;
+SignalBus.Elements = EquipElems;
 
 %% Data sharing between OpenDSS and Matlab workspace:
 
