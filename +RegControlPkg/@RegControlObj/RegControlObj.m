@@ -59,7 +59,7 @@ classdef RegControlObj < Simulink.Parameter
     
     properties (PropertyType = 'int32 scalar')
         % specified:
-        ControlledPhase
+%         ControlledPhase
         TapLimitPerChange % max allowable tap change per control
             % iteration in STATIC control mode
         xsfWinding % number of transformer winding being monitored,
@@ -87,7 +87,8 @@ classdef RegControlObj < Simulink.Parameter
         ReverseNeutral% true --> reg goes to neutral in reverse
             % direction or in cogen operation
         ReversePending
-        fInverseTime
+        fInverseTime % The time delay is adjusted inversely proportional 
+            % to the amount the voltage is outside the band down to 10%.
             
         % private to control logic:
         UsingRegulatedBus
@@ -218,6 +219,8 @@ classdef RegControlObj < Simulink.Parameter
             obj.ElementName = p.Results.ElementName;
             obj.RegulatedBus = p.Results.RegulatedBus;
             
+            obj.ControlledPhase = obj.getControlledPhase;
+            
             if obj.RegulatedBus == ""
                 obj.UsingRegulatedBus = false;
             else % Regulated bus specified
@@ -246,6 +249,9 @@ classdef RegControlObj < Simulink.Parameter
 
             text = strcat(line1, line2);
         end
+        
+%         function cp = GetControlledPhase(obj)
+%         end
     end
     
     methods(Static)

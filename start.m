@@ -196,6 +196,11 @@ ControlledTransformerVoltages.DataType = 'double';
 ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
 % [in ... | out ...]' (complex)
 
+ControlledTransformerCurrents = Simulink.Parameter;
+ControlledTransformerCurrents.DataType = 'double';
+ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
+% [in ... | out ...]' (complex)
+
 ControlledTransformerPowers = Simulink.Parameter;
 ControlledTransformerPowers.DataType = 'double';
 ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
@@ -209,12 +214,12 @@ VTerminal.DataType = 'double';
 VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
 % [in ... | out ...]' (complex)
 
-CBuffer = MakeComplex(xfm1.Currents);
+% CBuffer = MakeComplex(xfm1.Currents);
 
-ILDC = Simulink.Parameter;
-ILDC.DataType = 'double';
-ILDC.Value = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledPhase - 1) ...
-    / RCReg1.CTRating;
+% ILDC = Simulink.Parameter;
+% ILDC.DataType = 'double';
+% ILDC.Value = CBuffer(TReg1.fNconds*(RCReg1.ElementTerminal) + RCReg1.ControlledPhase - 1) ...
+%     / RCReg1.CTRating;
 % a complex scalar
 
 SignalElems(1) = Simulink.BusElement;
@@ -226,7 +231,7 @@ SignalElems(1).SampleTime = -1;
 SignalElems(1).Complexity = 'complex';
 
 SignalElems(2) = Simulink.BusElement;
-SignalElems(2).Name = 'ControlledTransformerPowers';
+SignalElems(2).Name = 'ControlledTransformerCurrents';
 SignalElems(2).Dimensions = 4;
 SignalElems(2).DimensionsMode = 'Fixed';
 SignalElems(2).DataType = 'double';
@@ -234,7 +239,7 @@ SignalElems(2).SampleTime = -1;
 SignalElems(2).Complexity = 'complex';
 
 SignalElems(3) = Simulink.BusElement;
-SignalElems(3).Name = 'VTerminal';
+SignalElems(3).Name = 'ControlledTransformerPowers';
 SignalElems(3).Dimensions = 4;
 SignalElems(3).DimensionsMode = 'Fixed';
 SignalElems(3).DataType = 'double';
@@ -242,12 +247,20 @@ SignalElems(3).SampleTime = -1;
 SignalElems(3).Complexity = 'complex';
 
 SignalElems(4) = Simulink.BusElement;
-SignalElems(4).Name = 'ILDC';
-SignalElems(4).Dimensions = 1;
+SignalElems(4).Name = 'VTerminal';
+SignalElems(4).Dimensions = 4;
 SignalElems(4).DimensionsMode = 'Fixed';
 SignalElems(4).DataType = 'double';
 SignalElems(4).SampleTime = -1;
 SignalElems(4).Complexity = 'complex';
+
+% SignalElems(4) = Simulink.BusElement;
+% SignalElems(4).Name = 'ILDC';
+% SignalElems(4).Dimensions = 1;
+% SignalElems(4).DimensionsMode = 'Fixed';
+% SignalElems(4).DataType = 'double';
+% SignalElems(4).SampleTime = -1;
+% SignalElems(4).Complexity = 'complex';
 
 SignalBus = Simulink.Bus;
 SignalBus.Elements = SignalElems;
@@ -434,6 +447,19 @@ EquipElems(15).DataType = 'uint8';
 EquipElems(15).SampleTime = -1;
 EquipElems(15).Complexity = 'real';
 
+FPTphase = Simulink.Parameter;
+FPTphase.DataType = 'uint8';
+FPTphase.Value = RCReg1.fPTphase; 
+
+EquipElems(16) = Simulink.BusElement;
+EquipElems(16).Name = 'FPTphase';
+EquipElems(16).Dimensions = 1;
+EquipElems(16).DimensionsMode = 'Fixed';
+EquipElems(16).DataType = 'uint8';
+EquipElems(16).SampleTime = -1;
+EquipElems(16).Complexity = 'real';
+
+
 %----
 
 tw = TapWinding.Value;
@@ -442,62 +468,194 @@ MinTap = Simulink.Parameter;
 MinTap.DataType = 'double';
 MinTap.Value = TReg1.Winding(tw).MinTap; 
 
-EquipElems(16) = Simulink.BusElement;
-EquipElems(16).Name = 'MinTap';
-EquipElems(16).Dimensions = 1;
-EquipElems(16).DimensionsMode = 'Fixed';
-EquipElems(16).DataType = 'double';
-EquipElems(16).SampleTime = -1;
-EquipElems(16).Complexity = 'real';
-
-MaxTap = Simulink.Parameter;
-MaxTap.DataType = 'double';
-MaxTap.Value = TReg1.Winding(tw).MaxTap; 
-
 EquipElems(17) = Simulink.BusElement;
-EquipElems(17).Name = 'MaxTap';
+EquipElems(17).Name = 'MinTap';
 EquipElems(17).Dimensions = 1;
 EquipElems(17).DimensionsMode = 'Fixed';
 EquipElems(17).DataType = 'double';
 EquipElems(17).SampleTime = -1;
 EquipElems(17).Complexity = 'real';
 
-TapIncrement = Simulink.Parameter;
-TapIncrement.DataType = 'double';
-TapIncrement.Value = TReg1.Winding(tw).TapIncrement;
+MaxTap = Simulink.Parameter;
+MaxTap.DataType = 'double';
+MaxTap.Value = TReg1.Winding(tw).MaxTap; 
 
 EquipElems(18) = Simulink.BusElement;
-EquipElems(18).Name = 'TapIncrement';
+EquipElems(18).Name = 'MaxTap';
 EquipElems(18).Dimensions = 1;
 EquipElems(18).DimensionsMode = 'Fixed';
 EquipElems(18).DataType = 'double';
 EquipElems(18).SampleTime = -1;
 EquipElems(18).Complexity = 'real';
 
+TapIncrement = Simulink.Parameter;
+TapIncrement.DataType = 'double';
+TapIncrement.Value = TReg1.Winding(tw).TapIncrement;
+
+EquipElems(19) = Simulink.BusElement;
+EquipElems(19).Name = 'TapIncrement';
+EquipElems(19).Dimensions = 1;
+EquipElems(19).DimensionsMode = 'Fixed';
+EquipElems(19).DataType = 'double';
+EquipElems(19).SampleTime = -1;
+EquipElems(19).Complexity = 'real';
+
 ControlledTransformerConnection = Simulink.Parameter;
 ControlledTransformerConnection.DataType = 'uint8';
 ControlledTransformerConnection.Value = ...
     TReg1.Winding(tw).Connection; 
 
-EquipElems(19) = Simulink.BusElement;
-EquipElems(19).Name = 'ControlledTransformerConnection';
-EquipElems(19).Dimensions = 1;
-EquipElems(19).DimensionsMode = 'Fixed';
-EquipElems(19).DataType = 'uint8';
-EquipElems(19).SampleTime = -1;
-EquipElems(19).Complexity = 'real';
+EquipElems(20) = Simulink.BusElement;
+EquipElems(20).Name = 'ControlledTransformerConnection';
+EquipElems(20).Dimensions = 1;
+EquipElems(20).DimensionsMode = 'Fixed';
+EquipElems(20).DataType = 'uint8';
+EquipElems(20).SampleTime = -1;
+EquipElems(20).Complexity = 'real';
 
 BaseVoltage = Simulink.Parameter;
 BaseVoltage.DataType = 'double';
 BaseVoltage.Value = TReg1.Winding(tw).Vbase; 
 
-EquipElems(20) = Simulink.BusElement;
-EquipElems(20).Name = 'BaseVoltage';
-EquipElems(20).Dimensions = 1;
-EquipElems(20).DimensionsMode = 'Fixed';
-EquipElems(20).DataType = 'double';
-EquipElems(20).SampleTime = -1;
-EquipElems(20).Complexity = 'real';
+EquipElems(21) = Simulink.BusElement;
+EquipElems(21).Name = 'BaseVoltage';
+EquipElems(21).Dimensions = 1;
+EquipElems(21).DimensionsMode = 'Fixed';
+EquipElems(21).DataType = 'double';
+EquipElems(21).SampleTime = -1;
+EquipElems(21).Complexity = 'real';
+
+PresentTap = Simulink.Parameter;
+PresentTap.DataType = 'double';
+PresentTap.Value = TReg1.Winding(tw).puTap; 
+
+EquipElems(22) = Simulink.BusElement;
+EquipElems(22).Name = 'PresentTap';
+EquipElems(22).Dimensions = 1;
+EquipElems(22).DimensionsMode = 'Fixed';
+EquipElems(22).DataType = 'double';
+EquipElems(22).SampleTime = -1;
+EquipElems(22).Complexity = 'real';
+
+NumConductors = Simulink.Parameter;
+NumConductors.DataType = 'uint8';
+NumConductors.Value = TReg1.fNconds;
+
+EquipElems(23) = Simulink.BusElement;
+EquipElems(23).Name = 'NumConductors';
+EquipElems(23).Dimensions = 1;
+EquipElems(23).DimensionsMode = 'Fixed';
+EquipElems(23).DataType = 'uint8';
+EquipElems(23).SampleTime = -1;
+EquipElems(23).Complexity = 'real';
+
+CTRating = Simulink.Parameter;
+CTRating.DataType = 'double';
+CTRating.Value = RCReg1.CTRating;
+
+EquipElems(24) = Simulink.BusElement;
+EquipElems(24).Name = 'CTRating';
+EquipElems(24).Dimensions = 1;
+EquipElems(24).DimensionsMode = 'Fixed';
+EquipElems(24).DataType = 'double';
+EquipElems(24).SampleTime = -1;
+EquipElems(24).Complexity = 'real';
+
+NumPhases = Simulink.Parameter;
+NumPhases.DataType = 'uint8';
+NumPhases.Value = TReg1.fNphases;
+
+EquipElems(25) = Simulink.BusElement;
+EquipElems(25).Name = 'NumPhases';
+EquipElems(25).Dimensions = 1;
+EquipElems(25).DimensionsMode = 'Fixed';
+EquipElems(25).DataType = 'uint8';
+EquipElems(25).SampleTime = -1;
+EquipElems(25).Complexity = 'real';
+
+IsInverseTime = Simulink.Parameter;
+IsInverseTime.DataType = 'boolean';
+IsInverseTime.Value = RCReg1.fInverseTime;
+
+EquipElems(26) = Simulink.BusElement;
+EquipElems(26).Name = 'IsInverseTime';
+EquipElems(26).Dimensions = 1;
+EquipElems(26).DimensionsMode = 'Fixed';
+EquipElems(26).DataType = 'boolean';
+EquipElems(26).SampleTime = -1;
+EquipElems(26).Complexity = 'real';
+
+R = Simulink.Parameter;
+R.DataType = 'double';
+R.Value = RCReg1.R;
+
+EquipElems(27) = Simulink.BusElement;
+EquipElems(27).Name = 'R';
+EquipElems(27).Dimensions = 1;
+EquipElems(27).DimensionsMode = 'Fixed';
+EquipElems(27).DataType = 'double';
+EquipElems(27).SampleTime = -1;
+EquipElems(27).Complexity = 'real';
+
+X = Simulink.Parameter;
+X.DataType = 'double';
+X.Value = RCReg1.X;
+
+EquipElems(28) = Simulink.BusElement;
+EquipElems(28).Name = 'X';
+EquipElems(28).Dimensions = 1;
+EquipElems(28).DimensionsMode = 'Fixed';
+EquipElems(28).DataType = 'double';
+EquipElems(28).SampleTime = -1;
+EquipElems(28).Complexity = 'real';
+
+revR = Simulink.Parameter;
+revR.DataType = 'double';
+revR.Value = RCReg1.revR;
+
+EquipElems(29) = Simulink.BusElement;
+EquipElems(29).Name = 'revR';
+EquipElems(29).Dimensions = 1;
+EquipElems(29).DimensionsMode = 'Fixed';
+EquipElems(29).DataType = 'double';
+EquipElems(29).SampleTime = -1;
+EquipElems(29).Complexity = 'real';
+
+revX = Simulink.Parameter;
+revX.DataType = 'double';
+revX.Value = RCReg1.revX;
+
+EquipElems(30) = Simulink.BusElement;
+EquipElems(30).Name = 'revX';
+EquipElems(30).Dimensions = 1;
+EquipElems(30).DimensionsMode = 'Fixed';
+EquipElems(30).DataType = 'double';
+EquipElems(30).SampleTime = -1;
+EquipElems(30).Complexity = 'real';
+
+revLDC_Z = Simulink.Parameter;
+revLDC_Z.DataType = 'double';
+revLDC_Z.Value = RCReg1.revLDC_Z;
+
+EquipElems(31) = Simulink.BusElement;
+EquipElems(31).Name = 'revLDC_Z';
+EquipElems(31).Dimensions = 1;
+EquipElems(31).DimensionsMode = 'Fixed';
+EquipElems(31).DataType = 'double';
+EquipElems(31).SampleTime = -1;
+EquipElems(31).Complexity = 'real';
+
+TimeDelay = Simulink.Parameter;
+TimeDelay.DataType = 'double';
+TimeDelay.Value = RCReg1.TimeDelay;
+
+EquipElems(32) = Simulink.BusElement;
+EquipElems(32).Name = 'TimeDelay';
+EquipElems(32).Dimensions = 1;
+EquipElems(32).DimensionsMode = 'Fixed';
+EquipElems(32).DataType = 'double';
+EquipElems(32).SampleTime = -1;
+EquipElems(32).Complexity = 'real';
 
 EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
