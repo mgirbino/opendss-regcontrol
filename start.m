@@ -269,7 +269,7 @@ SignalBus.Elements = SignalElems;
 
 BandWidth = Simulink.Parameter;
 BandWidth.DataType = 'double';
-BandWidth.Value = RCReg1.Bandwidth; 
+BandWidth.Value = double(RCReg1.Bandwidth); 
 
 EquipElems(1) = Simulink.BusElement;
 EquipElems(1).Name = 'BandWidth';
@@ -281,7 +281,7 @@ EquipElems(1).Complexity = 'real';
 
 UsingRegulatedBus = Simulink.Parameter;
 UsingRegulatedBus.DataType = 'boolean';
-UsingRegulatedBus.Value = RCReg1.UsingRegulatedBus; 
+UsingRegulatedBus.Value = boolean(RCReg1.UsingRegulatedBus); 
 
 EquipElems(2) = Simulink.BusElement;
 EquipElems(2).Name = 'UsingRegulatedBus';
@@ -293,7 +293,7 @@ EquipElems(2).Complexity = 'real';
 
 CogenEnabled = Simulink.Parameter;
 CogenEnabled.DataType = 'boolean';
-CogenEnabled.Value = RCReg1.CogenEnabled; 
+CogenEnabled.Value = boolean(RCReg1.CogenEnabled); 
 
 EquipElems(3) = Simulink.BusElement;
 EquipElems(3).Name = 'CogenEnabled';
@@ -305,7 +305,7 @@ EquipElems(3).Complexity = 'real';
 
 LDC_Z = Simulink.Parameter;
 LDC_Z.DataType = 'double';
-LDC_Z.Value = RCReg1.LDC_Z; 
+LDC_Z.Value = double(RCReg1.LDC_Z); 
 
 EquipElems(4) = Simulink.BusElement;
 EquipElems(4).Name = 'LDC_Z';
@@ -317,7 +317,7 @@ EquipElems(4).Complexity = 'real';
 
 TapLimitPerChange = Simulink.Parameter;
 TapLimitPerChange.DataType = 'uint8';
-TapLimitPerChange.Value = RCReg1.TapLimitPerChange; 
+TapLimitPerChange.Value = uint8(RCReg1.TapLimitPerChange); 
 
 EquipElems(5) = Simulink.BusElement;
 EquipElems(5).Name = 'TapLimitPerChange';
@@ -329,7 +329,7 @@ EquipElems(5).Complexity = 'real';
 
 PTratio = Simulink.Parameter;
 PTratio.DataType = 'double';
-PTratio.Value = RCReg1.PTRatio; 
+PTratio.Value = double(RCReg1.PTRatio); 
 
 EquipElems(6) = Simulink.BusElement;
 EquipElems(6).Name = 'PTratio';
@@ -341,7 +341,7 @@ EquipElems(6).Complexity = 'real';
 
 RevBand = Simulink.Parameter;
 RevBand.DataType = 'double';
-RevBand.Value = RCReg1.revBandwidth; 
+RevBand.Value = double(RCReg1.revBandwidth); 
 
 EquipElems(7) = Simulink.BusElement;
 EquipElems(7).Name = 'RevBand';
@@ -353,7 +353,7 @@ EquipElems(7).Complexity = 'real';
 
 RevDelay = Simulink.Parameter;
 RevDelay.DataType = 'double';
-RevDelay.Value = RCReg1.RevDelay; 
+RevDelay.Value = double(RCReg1.RevDelay); 
 
 EquipElems(8) = Simulink.BusElement;
 EquipElems(8).Name = 'RevDelay';
@@ -365,7 +365,7 @@ EquipElems(8).Complexity = 'real';
 
 IsReversible = Simulink.Parameter;
 IsReversible.DataType = 'boolean';
-IsReversible.Value = RCReg1.IsReversible; 
+IsReversible.Value = boolean(RCReg1.IsReversible); 
 
 EquipElems(9) = Simulink.BusElement;
 EquipElems(9).Name = 'IsReversible';
@@ -377,7 +377,7 @@ EquipElems(9).Complexity = 'real';
 
 RevVreg = Simulink.Parameter;
 RevVreg.DataType = 'double';
-RevVreg.Value = RCReg1.RevVreg; 
+RevVreg.Value = double(RCReg1.RevVreg); 
 
 EquipElems(10) = Simulink.BusElement;
 EquipElems(10).Name = 'RevVreg';
@@ -389,7 +389,7 @@ EquipElems(10).Complexity = 'real';
 
 RevPowerThreshold = Simulink.Parameter;
 RevPowerThreshold.DataType = 'double';
-RevPowerThreshold.Value = RCReg1.revPowerThreshold; 
+RevPowerThreshold.Value = double(RCReg1.revPowerThreshold); 
 
 EquipElems(11) = Simulink.BusElement;
 EquipElems(11).Name = 'RevPowerThreshold';
@@ -401,7 +401,7 @@ EquipElems(11).Complexity = 'real';
 
 Vlimit = Simulink.Parameter;
 Vlimit.DataType = 'double';
-Vlimit.Value = RCReg1.Vlimit; 
+Vlimit.Value = double(RCReg1.Vlimit); 
 
 EquipElems(12) = Simulink.BusElement;
 EquipElems(12).Name = 'Vlimit';
@@ -413,7 +413,7 @@ EquipElems(12).Complexity = 'real';
 
 Vreg = Simulink.Parameter;
 Vreg.DataType = 'double';
-Vreg.Value = RCReg1.Vreg; 
+Vreg.Value = double(RCReg1.Vreg); 
 
 EquipElems(13) = Simulink.BusElement;
 EquipElems(13).Name = 'Vreg';
@@ -425,7 +425,7 @@ EquipElems(13).Complexity = 'real';
 
 TapDelay = Simulink.Parameter;
 TapDelay.DataType = 'double';
-TapDelay.Value = RCReg1.TapDelay; 
+TapDelay.Value = double(RCReg1.TapDelay); 
 
 EquipElems(14) = Simulink.BusElement;
 EquipElems(14).Name = 'TapDelay';
@@ -437,7 +437,7 @@ EquipElems(14).Complexity = 'real';
 
 TapWinding = Simulink.Parameter;
 TapWinding.DataType = 'uint8';
-TapWinding.Value = RCReg1.xsfWinding; 
+TapWinding.Value = uint8(RCReg1.xsfWinding); 
 
 EquipElems(15) = Simulink.BusElement;
 EquipElems(15).Name = 'TapWinding';
@@ -449,7 +449,7 @@ EquipElems(15).Complexity = 'real';
 
 FPTphase = Simulink.Parameter;
 FPTphase.DataType = 'uint8';
-FPTphase.Value = RCReg1.fPTphase; 
+FPTphase.Value = uint8(RCReg1.fPTphase); 
 
 EquipElems(16) = Simulink.BusElement;
 EquipElems(16).Name = 'FPTphase';
@@ -466,7 +466,7 @@ tw = TapWinding.Value;
 
 MinTap = Simulink.Parameter;
 MinTap.DataType = 'double';
-MinTap.Value = TReg1.Winding(tw).MinTap; 
+MinTap.Value = double(TReg1.Winding(tw).MinTap); 
 
 EquipElems(17) = Simulink.BusElement;
 EquipElems(17).Name = 'MinTap';
@@ -478,7 +478,7 @@ EquipElems(17).Complexity = 'real';
 
 MaxTap = Simulink.Parameter;
 MaxTap.DataType = 'double';
-MaxTap.Value = TReg1.Winding(tw).MaxTap; 
+MaxTap.Value = double(TReg1.Winding(tw).MaxTap); 
 
 EquipElems(18) = Simulink.BusElement;
 EquipElems(18).Name = 'MaxTap';
@@ -490,7 +490,7 @@ EquipElems(18).Complexity = 'real';
 
 TapIncrement = Simulink.Parameter;
 TapIncrement.DataType = 'double';
-TapIncrement.Value = TReg1.Winding(tw).TapIncrement;
+TapIncrement.Value = double(TReg1.Winding(tw).TapIncrement);
 
 EquipElems(19) = Simulink.BusElement;
 EquipElems(19).Name = 'TapIncrement';
@@ -503,7 +503,7 @@ EquipElems(19).Complexity = 'real';
 ControlledTransformerConnection = Simulink.Parameter;
 ControlledTransformerConnection.DataType = 'uint8';
 ControlledTransformerConnection.Value = ...
-    TReg1.Winding(tw).Connection; 
+    uint8(TReg1.Winding(tw).Connection); 
 
 EquipElems(20) = Simulink.BusElement;
 EquipElems(20).Name = 'ControlledTransformerConnection';
@@ -515,7 +515,7 @@ EquipElems(20).Complexity = 'real';
 
 BaseVoltage = Simulink.Parameter;
 BaseVoltage.DataType = 'double';
-BaseVoltage.Value = TReg1.Winding(tw).Vbase; 
+BaseVoltage.Value = double(TReg1.Winding(tw).Vbase); 
 
 EquipElems(21) = Simulink.BusElement;
 EquipElems(21).Name = 'BaseVoltage';
@@ -527,7 +527,7 @@ EquipElems(21).Complexity = 'real';
 
 PresentTap = Simulink.Parameter;
 PresentTap.DataType = 'double';
-PresentTap.Value = TReg1.Winding(tw).puTap; 
+PresentTap.Value = double(TReg1.Winding(tw).puTap); 
 
 EquipElems(22) = Simulink.BusElement;
 EquipElems(22).Name = 'PresentTap';
@@ -539,7 +539,7 @@ EquipElems(22).Complexity = 'real';
 
 NumConductors = Simulink.Parameter;
 NumConductors.DataType = 'uint8';
-NumConductors.Value = TReg1.fNconds;
+NumConductors.Value = uint8(TReg1.fNconds);
 
 EquipElems(23) = Simulink.BusElement;
 EquipElems(23).Name = 'NumConductors';
@@ -551,7 +551,7 @@ EquipElems(23).Complexity = 'real';
 
 CTRating = Simulink.Parameter;
 CTRating.DataType = 'double';
-CTRating.Value = RCReg1.CTRating;
+CTRating.Value = double(RCReg1.CTRating);
 
 EquipElems(24) = Simulink.BusElement;
 EquipElems(24).Name = 'CTRating';
@@ -563,7 +563,7 @@ EquipElems(24).Complexity = 'real';
 
 NumPhases = Simulink.Parameter;
 NumPhases.DataType = 'uint8';
-NumPhases.Value = TReg1.fNphases;
+NumPhases.Value = uint8(TReg1.fNphases);
 
 EquipElems(25) = Simulink.BusElement;
 EquipElems(25).Name = 'NumPhases';
@@ -575,7 +575,7 @@ EquipElems(25).Complexity = 'real';
 
 IsInverseTime = Simulink.Parameter;
 IsInverseTime.DataType = 'boolean';
-IsInverseTime.Value = RCReg1.fInverseTime;
+IsInverseTime.Value = boolean(RCReg1.fInverseTime);
 
 EquipElems(26) = Simulink.BusElement;
 EquipElems(26).Name = 'IsInverseTime';
@@ -587,7 +587,7 @@ EquipElems(26).Complexity = 'real';
 
 R = Simulink.Parameter;
 R.DataType = 'double';
-R.Value = RCReg1.R;
+R.Value = double(RCReg1.R);
 
 EquipElems(27) = Simulink.BusElement;
 EquipElems(27).Name = 'R';
@@ -599,7 +599,7 @@ EquipElems(27).Complexity = 'real';
 
 X = Simulink.Parameter;
 X.DataType = 'double';
-X.Value = RCReg1.X;
+X.Value = double(RCReg1.X);
 
 EquipElems(28) = Simulink.BusElement;
 EquipElems(28).Name = 'X';
@@ -611,7 +611,7 @@ EquipElems(28).Complexity = 'real';
 
 revR = Simulink.Parameter;
 revR.DataType = 'double';
-revR.Value = RCReg1.revR;
+revR.Value = double(RCReg1.revR);
 
 EquipElems(29) = Simulink.BusElement;
 EquipElems(29).Name = 'revR';
@@ -623,7 +623,7 @@ EquipElems(29).Complexity = 'real';
 
 revX = Simulink.Parameter;
 revX.DataType = 'double';
-revX.Value = RCReg1.revX;
+revX.Value = double(RCReg1.revX);
 
 EquipElems(30) = Simulink.BusElement;
 EquipElems(30).Name = 'revX';
@@ -635,7 +635,7 @@ EquipElems(30).Complexity = 'real';
 
 revLDC_Z = Simulink.Parameter;
 revLDC_Z.DataType = 'double';
-revLDC_Z.Value = RCReg1.revLDC_Z;
+revLDC_Z.Value = double(RCReg1.revLDC_Z);
 
 EquipElems(31) = Simulink.BusElement;
 EquipElems(31).Name = 'revLDC_Z';
@@ -647,7 +647,7 @@ EquipElems(31).Complexity = 'real';
 
 TimeDelay = Simulink.Parameter;
 TimeDelay.DataType = 'double';
-TimeDelay.Value = RCReg1.TimeDelay;
+TimeDelay.Value = double(RCReg1.TimeDelay);
 
 EquipElems(32) = Simulink.BusElement;
 EquipElems(32).Name = 'TimeDelay';

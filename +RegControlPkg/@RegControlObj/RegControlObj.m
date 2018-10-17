@@ -219,7 +219,7 @@ classdef RegControlObj < Simulink.Parameter
             obj.ElementName = p.Results.ElementName;
             obj.RegulatedBus = p.Results.RegulatedBus;
             
-            obj.ControlledPhase = obj.getControlledPhase;
+            % obj.ControlledPhase = obj.getControlledPhase;
             
             if obj.RegulatedBus == ""
                 obj.UsingRegulatedBus = false;
