@@ -3,9 +3,9 @@ classdef RegControlObj < Simulink.Parameter
     %   Is used in conjunction with a transformer, but does not directly
     %   interface with or contain one
     
-    properties (Constant)
-        EPSILON = 1.0e-12;
-    end
+%     properties (Constant)
+%         EPSILON = 1.0e-12;
+%     end
     
     properties (PropertyType = 'double scalar')
         % specified:
