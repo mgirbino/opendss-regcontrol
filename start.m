@@ -662,6 +662,62 @@ EquipmentBus.Elements = EquipElems;
 
 %% Buses for 3-phase operation:
 
+% message buses:
+RegCtrlActionElems(1) = Simulink.BusElement;
+RegCtrlActionElems(1).Name = 'RegCtrl1';
+RegCtrlActionElems(1).DataType = 'uint8';
+
+RegCtrlActionElems(2) = Simulink.BusElement;
+RegCtrlActionElems(2).Name = 'RegCtrl2';
+RegCtrlActionElems(2).DataType = 'uint8';
+
+RegCtrlActionElems(3) = Simulink.BusElement;
+RegCtrlActionElems(3).Name = 'RegCtrl3';
+RegCtrlActionElems(3).DataType = 'uint8';
+
+RegCtrlActionBus = Simulink.Bus;
+RegCtrlActionBus.Elements = RegCtrlActionElems;
+
+ExecActionElems(1) = Simulink.BusElement;
+ExecActionElems(1).Name = 'Exec1';
+ExecActionElems(1).DataType = 'uint8';
+
+ExecActionElems(2) = Simulink.BusElement;
+ExecActionElems(2).Name = 'Exec2';
+ExecActionElems(2).DataType = 'uint8';
+
+ExecActionElems(3) = Simulink.BusElement;
+ExecActionElems(3).Name = 'Exec3';
+ExecActionElems(3).DataType = 'uint8';
+
+ExecActionBus = Simulink.Bus;
+ExecActionBus.Elements = ExecActionElems;
+
+RegCtrlActionBus = Simulink.Bus;
+RegCtrlActionBus.Elements = RegCtrlActionElems;
+
+% data buses:
+TimeElems(1) = Simulink.BusElement;
+TimeElems(1).Name = 'Time1';
+TimeElems(1).DataType = 'uint8';
+
+TimeElems(2) = Simulink.BusElement;
+TimeElems(2).Name = 'Time2';
+TimeElems(2).DataType = 'uint8';
+
+TimeElems(3) = Simulink.BusElement;
+TimeElems(3).Name = 'Time3';
+TimeElems(3).DataType = 'uint8';
+
+TimeBus = Simulink.Bus;
+TimeBus.Elements = TimeElems;
+
+RevHandleBus = Simulink.Bus;
+RevHandleBus.Elements = RevHandleElems;
+
+QueueItemBus = Simulink.Bus;
+QueueItemBus.Elements = QueueItemElems;
+
 %% Running the simulation:
 
 simOut = sim('regcontrol_model','SimulationMode','normal','AbsTol','1e-5',...
