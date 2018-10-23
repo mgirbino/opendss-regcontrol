@@ -89,7 +89,7 @@ DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
 
 CtrlOps = zeros(10,4,96);
 % run for 24 hours:
-for i=1:96 % 3rd dimension of Ctrl Ops := # time divisions
+for nn=1:96 % 3rd dimension of Ctrl Ops := # time divisions
     DSSSolution.SolveNoControl;
     DSSSolution.SampleControlDevices;
 
@@ -100,19 +100,19 @@ for i=1:96 % 3rd dimension of Ctrl Ops := # time divisions
         RawQueue = parseCSV(CtrlQueueFile);
         
         % CtrlOps(:,:,i) = [ Time | Handle | ActionCode | Device ]
-        CtrlOps(1:len,CtrlOpsFields.Time,i) = RawQueue{CtrlQueueFields.Hour}...
+        CtrlOps(1:len,CtrlOpsFields.Time,nn) = RawQueue{CtrlQueueFields.Hour}...
             + RawQueue{CtrlQueueFields.Sec}/3600;
-        CtrlOps(1:len,CtrlOpsFields.Handle,i) = RawQueue{CtrlQueueFields.Handle};
-        CtrlOps(1:len,CtrlOpsFields.ActionCode,i) = RawQueue{CtrlQueueFields.ActionCode};
+        CtrlOps(1:len,CtrlOpsFields.Handle,nn) = RawQueue{CtrlQueueFields.Handle};
+        CtrlOps(1:len,CtrlOpsFields.ActionCode,nn) = RawQueue{CtrlQueueFields.ActionCode};
         CtrlDev = erase(RawQueue{CtrlQueueFields.Device},' ');
-        for i = 1:size(CtrlDev,1)
-            switch string(CtrlDev(i,1))
+        for nn = 1:size(CtrlDev,1)
+            switch string(CtrlDev(nn,1))
                 case 'reg1'
-                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg1;
+                    CtrlOps(1:len,CtrlOpsFields.Device,nn) = Device.Reg1;
                 case 'reg2'
-                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg2;
+                    CtrlOps(1:len,CtrlOpsFields.Device,nn) = Device.Reg2;
                 case 'reg3'
-                    CtrlOps(1:len,CtrlOpsFields.Device,i) = Device.Reg3;
+                    CtrlOps(1:len,CtrlOpsFields.Device,nn) = Device.Reg3;
             end
         end
     end
@@ -659,6 +659,81 @@ EquipElems(32).Complexity = 'real';
 
 EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
+
+%% Buses for 3-phase operation:
+
+%% Running the simulation:
+
+simOut = sim('regcontrol_model','SimulationMode','normal','AbsTol','1e-5',...
+            'SaveState','on','StateSaveName','xout',...
+            'SaveOutput','on','OutputSaveName','yout',...
+ 'SaveFormat', 'Dataset');
+% 
+% outputs = simOut.get('yout');
+
+%% Looping the simulation (1 run = 1 timestep in DSS)
+
+% Add loadshape:
+DSSText.Command = 'New LoadShape.LoadShape2a npts=96 interval=0.25';
+DSSCircuit.LoadShape.name = 'LoadShape2a';
+ls = csvread('LoadShape1.csv');
+feature('COM_SafeArraySingleDim',1);
+DSSCircuit.LoadShape.pmult =  ls;
+feature('COM_SafeArraySingleDim',0);
+
+% Apply loadshape to daily simulation:
+DSSLoads = DSSCircuit.Loads;
+iLoad = DSSLoads.First;
+while iLoad>0
+    DSSLoads.daily = 'LoadShape2a';
+    iLoad = DSSLoads.Next;
+end
+
+% Solve for a daily simulation:
+DSSText.Command = 'set mode=daily stepsize=15m number=96 controlmode=time';
+% number of solns to perform for Monte Carlo/daily load simulations
+DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
+
+N = 96;
+simOut = repmat(Simulink.SimulationOutput, N, 1);
+for nn = 1:N
+    % 1 - Obtain power flow:
+    DSSSolution.SolveNoControl;
+    
+    % 2 - Package measurements:
+    DSSCircuit.SetActiveElement('Transformer.TReg1');
+    xfm1 = DSSCircuit.ActiveCktElement;
+
+    ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
+    % [in ... | out ...]' (complex)
+
+    ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
+    % [in ... | out ...]' (complex)
+
+    ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
+    % [in ... | out ...]' (complex)
+
+    DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
+    RegulatedBus = DSSCircuit.ActiveCktElement;
+
+    VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
+    % [in ... | out ...]' (complex)
+    
+    PresentTap.Value = double(TReg1.Winding(tw).puTap); 
+    
+    % 3 - obtain control actions:    
+    simOut(nn) = sim('regcontrol_model', 'timeout', 1000);
+    
+    % 4 - execute tap changes:
+    xfms = DSSCircuit.Transformers;
+    xfms.Name = 'TReg1';
+    xfms.Tap = xfms.Tap + TapChangeToMake;
+    
+    % 5 - Power flow after control actions:    
+    DSSSolution.Solve;
+end
+
+DSSText.Command = 'Show Eventlog';
 
 %% Old data packaging:
 
