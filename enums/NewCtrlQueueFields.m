@@ -5,5 +5,6 @@ classdef NewCtrlQueueFields < uint8 % NewCtrlQueueFields
       Hour          (3)
       Sec           (4)
       ActionCode    (5)
+      Device        (6)
    end
 end
