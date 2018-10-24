@@ -1,6 +1,9 @@
 classdef QueueActions < uint8
    enumeration
        PUSH                 (1)
+       PUSH_1               (11)
+       PUSH_2               (12)
+       PUSH_3               (13)
        POP                  (2)
        POP_TIME             (3) % unused because time is included in ActionItem vector
        PEEK                 (4)
