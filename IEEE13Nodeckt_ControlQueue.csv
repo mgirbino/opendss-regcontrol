@@ -1,3 +1,2 @@
 Handle, Hour, Sec, ActionCode, ProxyDevRef, Device
-60, 22, 2702, 0, 0, reg1 
-59, 22, 2702, 0, 0, reg3 
+54, 23, 2715, 0, 0, rcreg3 

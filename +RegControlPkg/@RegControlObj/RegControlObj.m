@@ -240,11 +240,11 @@ classdef RegControlObj < Simulink.Parameter
             % DSSCOMMAND returns text that can be pasted into a DSS script
             % to create an identical RegControl
             
-            formatSpec = "New RegControl.%s transformer=%s winding=%d vreg=%g band=%g" + newline;
+            formatSpec = "New RegControl.%s transformer=%s winding=%d vreg=%g band=%g ";
             line1 = compose(formatSpec, evalin('caller','inputname(1)'), ...
                 obj.ElementName, obj.xsfWinding, obj.Vreg, obj.Bandwidth);
             
-            formatSpec = "~ptratio=%g ctprim=%g R=%g X=%g" + newline;
+            formatSpec = "ptratio=%g ctprim=%g R=%g X=%g";
             line2 = compose(formatSpec, obj.PTRatio, obj.CTRating, obj.R, obj.X);
 
             text = strcat(line1, line2);

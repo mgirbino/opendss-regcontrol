@@ -12,7 +12,7 @@ addpath(enumpath);
 
 if DSSStartOK
     a = 'DSS Started';
-    formatSpec = string('Compile (%s\\IEEE13Nodeckt_noreg.dss)');
+    formatSpec = "Compile (%s\\IEEE13Nodeckt_noreg.dss)";
     dirCommand = compose(formatSpec, pwd);
     DSSText.command = char(dirCommand);
     % Set up the interface variables
@@ -29,10 +29,29 @@ disp(a)
 TReg1 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
     'buses', ["650.1", "RG60.1"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
 
+TReg2 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+    'buses', ["650.2", "RG60.2"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
+
+TReg3 = TransformerObj('fNphases', 1, 'bank', "reg1", 'XHL', 0.01, 'kVAs', [1666 1666], ...
+    'buses', ["650.3", "RG60.3"], 'kVs', [2.4 2.4], 'pctLoadLoss', 0.01);
+
 RCReg1 = RegControlObj('ElementName', TReg1.getName, 'xsfWinding', 2, 'Vreg', 122, ...
     'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
 
+RCReg2 = RegControlObj('ElementName', TReg2.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+
+RCReg3 = RegControlObj('ElementName', TReg3.getName, 'xsfWinding', 2, 'Vreg', 122, ...
+    'Bandwidth', 2.0, 'PTRatio', 20, 'CTRating', 700, 'R', 3, 'X', 9);
+
+% new regcontrol.Reg1  transformer=Reg1 winding=2  vreg=122  band=2  ptratio=20 ctprim=700  R=3   X=9 !maxtapchange=1
+
 DSSText.command = TReg1.DSSCommand;
+DSSText.command = TReg2.DSSCommand;
+DSSText.command = TReg3.DSSCommand;
+
+DSSText.command = RCReg2.DSSCommand;
+DSSText.command = RCReg3.DSSCommand;
 
 %% Data packaging for Simulink:
 
@@ -41,17 +60,17 @@ xfm1 = DSSCircuit.ActiveCktElement;
 
 ControlledTransformerVoltages = Simulink.Parameter;
 ControlledTransformerVoltages.DataType = 'double';
-ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
+% ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
 % [in ... | out ...]' (complex)
 
 ControlledTransformerCurrents = Simulink.Parameter;
 ControlledTransformerCurrents.DataType = 'double';
-ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
+% ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
 % [in ... | out ...]' (complex)
 
 ControlledTransformerPowers = Simulink.Parameter;
 ControlledTransformerPowers.DataType = 'double';
-ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
+% ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
 % [in ... | out ...]' (complex)
 
 DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
@@ -59,7 +78,7 @@ RegulatedBus = DSSCircuit.ActiveCktElement;
 
 VTerminal = Simulink.Parameter;
 VTerminal.DataType = 'double';
-VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
+% VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
 % [in ... | out ...]' (complex)
 
 SignalElems(1) = Simulink.BusElement;
@@ -492,6 +511,16 @@ EquipElems(32).Complexity = 'real';
 EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
 
+%% Bootstrap for single-run testing purposes:
+ControlledTransformerVoltages.Value = 100*complex([2.4018 0 2.3882 0]', ...
+    [-0.0003 0 -0.0063 0]');
+ControlledTransformerCurrents.Value = 10*complex([2.8348 -2.8348 -2.8348 2.8348]', ...
+    [-1.0965 1.0965 1.0965 -1.0965]');
+ControlledTransformerPowers.Value = 10*complex([6.8090 0 -6.7770 0]', ...
+    [2.6327 0 -2.6008 0]');
+VTerminal.Value = 100*complex([2.4018 0 2.3882 0]', ...
+    [-0.0003 0 -0.0063 0]');
+
 %% Looping the simulation (1 run = 1 timestep in DSS)
 
 % Add loadshape:
@@ -517,7 +546,11 @@ DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
 
 N = 96;
 simOut = repmat(Simulink.SimulationOutput, N, 1);
+queue = zeros(1,5);
+Handle = 1;
+
 for nn = 1:N
+    Time = nn*(24/N)*3600; % converting fraction of day to seconds
     % 1 - Obtain power flow:
     DSSSolution.SolveNoControl;
     
