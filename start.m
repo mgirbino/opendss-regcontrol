@@ -753,6 +753,7 @@ DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
 N = 96;
 simOut = repmat(Simulink.SimulationOutput, N, 1);
 for nn = 1:N
+    tic;
     % 1 - Obtain power flow:
     DSSSolution.SolveNoControl;
     
@@ -787,6 +788,8 @@ for nn = 1:N
     
     % 5 - Power flow after control actions:    
     DSSSolution.Solve;
+    TimeElapsed = toc;
+    sprintf('
 end
 
 DSSText.Command = 'Show Eventlog';

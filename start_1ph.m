@@ -556,6 +556,7 @@ LastQueue.Value = zeros(1,5,50);
 LastHandle.Value = 1;
 
 for nn = 1:N
+    tic;
     % 1 - Obtain power flow from DSS:
     DSSSolution.SolveNoControl;
     
@@ -578,13 +579,17 @@ for nn = 1:N
     VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
     % [in ... | out ...]' (complex)
     
+    xfms = DSSCircuit.Transformers;
+    xfms.Name = 'TReg1';
+    TReg1.Winding(tw).puTap = double(xfms.Tap);
+    
     PresentTap.Value = double(TReg1.Winding(tw).puTap); 
     
     % 3 - configure simulation parameters with prior timestep's results:    
     TimeInSec.Value = double( nn*(24/N)*3600 );
     
     if nn > 1 % there exists an output from a prior iteration
-        LastHandle.Value = CurrHandle.Data(end); % 1-D vector
+        LastHandle.Value = CurrHandle.Data(end); % 1-D vecto
         LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
     end
     
@@ -592,13 +597,14 @@ for nn = 1:N
     simOut(nn) = sim('regcontrol_model', 'timeout', 1000);
     
     % 5 - execute tap changes in DSS:
-    xfms = DSSCircuit.Transformers;
-    xfms.Name = 'TReg1';
     xfms.Tap = xfms.Tap + TapChangeToMake.Data(end);
+    
+    TimeElapsed = toc;
+    
+    fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
     
     % 5 - Power flow after control actions:    
     DSSSolution.Solve;
-    sprintf('Iteration %d', nn);
 end
 
 DSSText.Command = 'Show Eventlog';
