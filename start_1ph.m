@@ -55,8 +55,14 @@ DSSText.command = RCReg3.DSSCommand;
 
 %% Data packaging for Simulink:
 
-DSSCircuit.SetActiveElement('Transformer.TReg1');
-xfm1 = DSSCircuit.ActiveCktElement;
+LastHandle = Simulink.Parameter;
+LastHandle.DataType = 'double';
+
+TimeInSec = Simulink.Parameter;
+TimeInSec.DataType = 'double';
+
+LastQueue = Simulink.Parameter;
+LastQueue.DataType = 'double';
 
 ControlledTransformerVoltages = Simulink.Parameter;
 ControlledTransformerVoltages.DataType = 'double';
@@ -546,15 +552,14 @@ DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
 
 N = 96;
 simOut = repmat(Simulink.SimulationOutput, N, 1);
-queue = zeros(1,5);
-Handle = 1;
+LastQueue.Value = zeros(1,5,50);
+LastHandle.Value = 1;
 
 for nn = 1:N
-    Time = nn*(24/N)*3600; % converting fraction of day to seconds
-    % 1 - Obtain power flow:
+    % 1 - Obtain power flow from DSS:
     DSSSolution.SolveNoControl;
     
-    % 2 - Package measurements:
+    % 2 - Package DSS measurements for Simulink:
     DSSCircuit.SetActiveElement('Transformer.TReg1');
     xfm1 = DSSCircuit.ActiveCktElement;
 
@@ -575,16 +580,25 @@ for nn = 1:N
     
     PresentTap.Value = double(TReg1.Winding(tw).puTap); 
     
-    % 3 - obtain control actions:    
+    % 3 - configure simulation parameters with prior timestep's results:    
+    TimeInSec.Value = double( nn*(24/N)*3600 );
+    
+    if nn > 1 % there exists an output from a prior iteration
+        LastHandle.Value = CurrHandle.Data(end); % 1-D vector
+        LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
+    end
+    
+    % 4 - obtain control actions from Simulink:    
     simOut(nn) = sim('regcontrol_model', 'timeout', 1000);
     
-    % 4 - execute tap changes:
+    % 5 - execute tap changes in DSS:
     xfms = DSSCircuit.Transformers;
     xfms.Name = 'TReg1';
-    xfms.Tap = xfms.Tap + TapChangeToMake;
+    xfms.Tap = xfms.Tap + TapChangeToMake.Data(end);
     
     % 5 - Power flow after control actions:    
     DSSSolution.Solve;
+    sprintf('Iteration %d', nn);
 end
 
 DSSText.Command = 'Show Eventlog';
