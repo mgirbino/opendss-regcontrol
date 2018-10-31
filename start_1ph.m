@@ -589,15 +589,18 @@ for nn = 1:N
     TimeInSec.Value = double( nn*(24/N)*3600 );
     
     if nn > 1 % there exists an output from a prior iteration
-        LastHandle.Value = CurrHandle.Data(end); % 1-D vecto
-        LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
+%         LastHandle.Value = CurrHandle.Data(end); % 1-D vecto
+        LastHandle.Value = CurrHandle;
+%         LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
+        LastQueue.Value = CurrQueue;
     end
     
     % 4 - obtain control actions from Simulink:    
     simOut(nn) = sim('regcontrol_model', 'timeout', 1000);
     
     % 5 - execute tap changes in DSS:
-    xfms.Tap = xfms.Tap + TapChangeToMake.Data(end);
+%     xfms.Tap = xfms.Tap + TapChangeToMake.Data(end);
+    xfms.Tap = xfms.Tap + TapChangeToMake;
     
     TimeElapsed = toc;
     
