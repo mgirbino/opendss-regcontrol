@@ -14,10 +14,14 @@ TimeInSec.DataType = 'double';
 LastQueue = Simulink.Parameter;
 LastQueue.DataType = 'double';
 
-N = 96;
+N = 3;
 simOut = repmat(Simulink.SimulationOutput, N, 1);
+% starting values:
 LastQueue.Value = zeros(1,5,50);
 LastHandle.Value = 1;
+
+QueueTimeLapse = zeros(1,5,50,N);
+HandleTimeLapse = zeros(N);
 
 for nn = 1:N
     tic;
@@ -26,10 +30,11 @@ for nn = 1:N
     TimeInSec.Value = double( nn*(24/N)*3600 );
     
     if nn > 1 % there exists an output from a prior iteration
-%         LastHandle.Value = CurrHandle.Data(end); % 1-D vecto
-        LastHandle.Value = CurrHandle;
-%         LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
-        LastQueue.Value = CurrQueue;
+        LastHandle.Value = CurrHandle.Data(end); % 1-D vector
+        LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
+        
+        HandleTimeLapse(nn) = LastHandle.Value;
+        QueueTimeLapse(:,:,:,nn) = LastQueue.Value;
     end
     
     % 4 - obtain control actions from Simulink:    
