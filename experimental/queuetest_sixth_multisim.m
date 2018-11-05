@@ -33,8 +33,8 @@ for nn = 1:N
         LastHandle.Value = CurrHandle.Data(end); % 1-D vector
         LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
         
-        HandleTimeLapse(nn) = LastHandle.Value;
-        QueueTimeLapse(:,:,:,nn) = LastQueue.Value;
+        HandleTimeLapse( nn-1 ) = LastHandle.Value;
+        QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
     end
     
     % 4 - obtain control actions from Simulink:    

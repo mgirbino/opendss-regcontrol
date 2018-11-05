@@ -50,6 +50,11 @@ DSSText.command = TReg1.DSSCommand;
 DSSText.command = TReg2.DSSCommand;
 DSSText.command = TReg3.DSSCommand;
 
+%%
+
+DSSText.command = RCReg1.DSSCommand;
+DSSText.command = RCReg2.DSSCommand;
+DSSText.command = RCReg3.DSSCommand;
 %% Run a Daily analysis and plot the voltages at the end of the feeder
 
 % Add loadshape:
@@ -789,7 +794,6 @@ for nn = 1:N
     % 5 - Power flow after control actions:    
     DSSSolution.Solve;
     TimeElapsed = toc;
-    sprintf('
 end
 
 DSSText.Command = 'Show Eventlog';
