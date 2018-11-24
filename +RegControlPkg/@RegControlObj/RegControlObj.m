@@ -6,6 +6,10 @@ classdef RegControlObj < Simulink.Parameter
 %     properties (Constant)
 %         EPSILON = 1.0e-12;
 %     end
+
+    properties (Access = private)
+        regName@string
+    end
     
     properties (PropertyType = 'double scalar')
         % specified:
@@ -219,6 +223,8 @@ classdef RegControlObj < Simulink.Parameter
             obj.ElementName = p.Results.ElementName;
             obj.RegulatedBus = p.Results.RegulatedBus;
             
+            obj.regName = string.empty;
+            
             % obj.ControlledPhase = obj.getControlledPhase;
             
             if obj.RegulatedBus == ""
@@ -234,6 +240,14 @@ classdef RegControlObj < Simulink.Parameter
 %             obj.fNconds = TempControlledElement.fNconds;
 %             obj.fNterms = TempControlledElement.fNterms;
 %             obj.ElementName = TempControlledElement.getName;
+        end
+        
+        function name = getName(obj)
+            if isempty(obj.regName)
+                tempName = evalin('caller','inputname(1)');
+                obj.regName = string(tempName);
+            end
+            name = obj.regName;
         end
         
         function text = DSSCommand(obj)

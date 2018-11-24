@@ -7,6 +7,9 @@ import RegControlPkg.RegControlObj;
 enumpath = strcat(pwd, '\enums');
 addpath(enumpath);
 
+exppath = strcat(pwd, '\experimental');
+addpath(exppath);
+
 % execute DSSStartup.m
 [DSSStartOK, DSSObj, DSSText] = DSSStartup;
 
@@ -55,8 +58,8 @@ DSSText.command = RCReg3.DSSCommand;
 
 %% Data packaging for Simulink:
 
-LastHandle = Simulink.Parameter;
-LastHandle.DataType = 'double';
+% LastHandle = Simulink.Parameter;
+% LastHandle.DataType = 'double';
 
 TimeInSec = Simulink.Parameter;
 TimeInSec.DataType = 'double';
@@ -514,18 +517,133 @@ EquipElems(32).DataType = 'double';
 EquipElems(32).SampleTime = -1;
 EquipElems(32).Complexity = 'real';
 
+DeltaDirection = Simulink.Parameter;
+DeltaDirection.DataType = 'uint8';
+DeltaDirection.Value = uint8(TReg1.DeltaDirection);
+
+EquipElems(33) = Simulink.BusElement;
+EquipElems(33).Name = 'DeltaDirection';
+EquipElems(33).Dimensions = 1;
+EquipElems(33).DimensionsMode = 'Fixed';
+EquipElems(33).DataType = 'uint8';
+EquipElems(33).SampleTime = -1;
+EquipElems(33).Complexity = 'real';
+
+ElementTerminal = Simulink.Parameter;
+ElementTerminal.DataType = 'uint8';
+ElementTerminal.Value = uint8(RCReg1.ElementTerminal);
+
+EquipElems(34) = Simulink.BusElement;
+EquipElems(34).Name = 'ElementTerminal';
+EquipElems(34).Dimensions = 1;
+EquipElems(34).DimensionsMode = 'Fixed';
+EquipElems(34).DataType = 'uint8';
+EquipElems(34).SampleTime = -1;
+EquipElems(34).Complexity = 'real';
+
 EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
 
-%% Bootstrap for single-run testing purposes:
-ControlledTransformerVoltages.Value = 100*complex([2.4018 0 2.3882 0]', ...
-    [-0.0003 0 -0.0063 0]');
-ControlledTransformerCurrents.Value = 10*complex([2.8348 -2.8348 -2.8348 2.8348]', ...
-    [-1.0965 1.0965 1.0965 -1.0965]');
-ControlledTransformerPowers.Value = 10*complex([6.8090 0 -6.7770 0]', ...
-    [2.6327 0 -2.6008 0]');
-VTerminal.Value = 100*complex([2.4018 0 2.3882 0]', ...
-    [-0.0003 0 -0.0063 0]');
+% ongoing system states:
+
+ReversePending = Simulink.Parameter;
+ReversePending.DataType = 'boolean';
+ReversePending.Value = false;
+
+StatesElems(1) = Simulink.BusElement;
+StatesElems(1).Name = 'ReversePending';
+StatesElems(1).Dimensions = 1;
+StatesElems(1).DimensionsMode = 'Fixed';
+StatesElems(1).DataType = 'boolean';
+StatesElems(1).SampleTime = -1;
+StatesElems(1).Complexity = 'real';
+
+InCogenMode = Simulink.Parameter;
+InCogenMode.DataType = 'boolean';
+InCogenMode.Value = false;
+
+StatesElems(2) = Simulink.BusElement;
+StatesElems(2).Name = 'InCogenMode';
+StatesElems(2).Dimensions = 1;
+StatesElems(2).DimensionsMode = 'Fixed';
+StatesElems(2).DataType = 'boolean';
+StatesElems(2).SampleTime = -1;
+StatesElems(2).Complexity = 'real';
+
+InReverseMode = Simulink.Parameter;
+InReverseMode.DataType = 'boolean';
+InReverseMode.Value = false;
+
+StatesElems(3) = Simulink.BusElement;
+StatesElems(3).Name = 'InReverseMode';
+StatesElems(3).Dimensions = 1;
+StatesElems(3).DimensionsMode = 'Fixed';
+StatesElems(3).DataType = 'boolean';
+StatesElems(3).SampleTime = -1;
+StatesElems(3).Complexity = 'real';
+
+LookingForward = Simulink.Parameter;
+LookingForward.DataType = 'boolean';
+LookingForward.Value = false;
+
+StatesElems(4) = Simulink.BusElement;
+StatesElems(4).Name = 'LookingForward';
+StatesElems(4).Dimensions = 1;
+StatesElems(4).DimensionsMode = 'Fixed';
+StatesElems(4).DataType = 'boolean';
+StatesElems(4).SampleTime = -1;
+StatesElems(4).Complexity = 'real';
+
+Armed = Simulink.Parameter;
+Armed.DataType = 'boolean';
+Armed.Value = false;
+
+StatesElems(5) = Simulink.BusElement;
+StatesElems(5).Name = 'Armed';
+StatesElems(5).Dimensions = 1;
+StatesElems(5).DimensionsMode = 'Fixed';
+StatesElems(5).DataType = 'boolean';
+StatesElems(5).SampleTime = -1;
+StatesElems(5).Complexity = 'real';
+
+Handle = Simulink.Parameter;
+Handle.DataType = 'uint8';
+Handle.Value = 0;
+
+StatesElems(6) = Simulink.BusElement;
+StatesElems(6).Name = 'Handle';
+StatesElems(6).Dimensions = 1;
+StatesElems(6).DimensionsMode = 'Fixed';
+StatesElems(6).DataType = 'uint8';
+StatesElems(6).SampleTime = -1;
+StatesElems(6).Complexity = 'real';
+
+RevHandle = Simulink.Parameter;
+RevHandle.DataType = 'uint8';
+RevHandle.Value = 0;
+
+StatesElems(7) = Simulink.BusElement;
+StatesElems(7).Name = 'RevHandle';
+StatesElems(7).Dimensions = 1;
+StatesElems(7).DimensionsMode = 'Fixed';
+StatesElems(7).DataType = 'uint8';
+StatesElems(7).SampleTime = -1;
+StatesElems(7).Complexity = 'real';
+
+RevBackHandle = Simulink.Parameter;
+RevBackHandle.DataType = 'uint8';
+RevBackHandle.Value = 0;
+
+StatesElems(8) = Simulink.BusElement;
+StatesElems(8).Name = 'RevBackHandle';
+StatesElems(8).Dimensions = 1;
+StatesElems(8).DimensionsMode = 'Fixed';
+StatesElems(8).DataType = 'uint8';
+StatesElems(8).SampleTime = -1;
+StatesElems(8).Complexity = 'real';
+
+StatesBus = Simulink.Bus;
+StatesBus.Elements = StatesElems;
 
 %% Looping the simulation (1 run = 1 timestep in DSS)
 
@@ -553,7 +671,20 @@ DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
 N = 96;
 simOut = repmat(Simulink.SimulationOutput, N, 1);
 LastQueue.Value = zeros(1,5,50);
-LastHandle.Value = 1;
+% LastHandle.Value = 1;
+
+QueueTimeLapse = zeros(1,5,50,N);
+ExecutedTimeLapse = zeros(1,5,N); % last executed item, updated on each iteration
+HandleTimeLapse = zeros(N,1);
+
+TimeVals = (24/N)*3600*(1:N);
+HourVals = floor(TimeVals/3600);
+SecVals = TimeVals - 3600*HourVals;
+
+EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
+    'Position', {}, 'TapChange', {} );
+
+N = 12;
 
 for nn = 1:N
     tic;
@@ -585,24 +716,39 @@ for nn = 1:N
     
     PresentTap.Value = double(TReg1.Winding(tw).puTap); 
     
-    % 3 - configure simulation parameters with prior timestep's results:    
-    TimeInSec.Value = double( nn*(24/N)*3600 );
+    % 3 - configure simulation parameters with prinnor timestep's results:    
+    TimeInSec.Value = TimeVals(nn);
     
     if nn > 1 % there exists an output from a prior iteration
-%         LastHandle.Value = CurrHandle.Data(end); % 1-D vecto
-        LastHandle.Value = CurrHandle;
-%         LastQueue.Value = CurrQueue.signals.values(:,:,:,end);
-        LastQueue.Value = CurrQueue;
+        ReversePending.Value = simOut(nn-1).CurrReversePending.Data;
+        InCogenMode.Value = simOut(nn-1).CurrInCogenMode.Data;
+        InReverseMode.Value = simOut(nn-1).CurrInReverseMode.Data;
+        LookingForward.Value = simOut(nn-1).CurrLookingForward.Data;
+        Armed.Value = simOut(nn-1).CurrArmed.Data;       
+        Handle.Value = simOut(nn-1).CurrHandle.Data;
+        RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
+        RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
+        
+        LastQueue.Value = simOut(nn-1).CurrQueue.signals.values(:,:,:,end);
+        
+        HandleTimeLapse( nn-1 ) = Handle.Value;
+        QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
+        ExecutedTimeLapse( :,:,(nn-1) ) = ...
+            simOut(nn-1).FromQueue.signals.values(:,:,end); % based on latest addition to the Queue
     end
     
     % 4 - obtain control actions from Simulink:    
-    simOut(nn) = sim('regcontrol_model', 'timeout', 1000);
-    
-    % 5 - execute tap changes in DSS:
-%     xfms.Tap = xfms.Tap + TapChangeToMake.Data(end);
-    xfms.Tap = xfms.Tap + TapChangeToMake;
+    simOut(nn) = sim('queuetest_seventh_static', 'TimeOut', 1000);
     
     TimeElapsed = toc;
+    
+    % 5 - execute tap changes in DSS:
+    xfms.Tap = xfms.Tap + simOut(nn).TapChangeToMake.Data;
+    
+    EventLog(nn) = LogEvent_1ph( nn, HourVals(nn), SecVals(nn), ...
+        ExecutedTimeLapse, simOut(nn).FromQueue.signals.values, ...
+        simOut(nn).TapChangeToMake.Data, ...
+        TapIncrement.Value, double(xfms.Tap) );  
     
     fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
     
@@ -611,3 +757,22 @@ for nn = 1:N
 end
 
 DSSText.Command = 'Show Eventlog';
+
+%% Bootstrap for single-run testing purposes:
+
+LastQueue.Value = zeros(1,5,50);
+N = 96;
+TimeVals = (24/N)*3600*(1:N);
+HourVals = floor(TimeVals/3600);
+SecVals = TimeVals - 3600*HourVals;
+
+TimeInSec.Value = TimeVals(1);
+
+ControlledTransformerVoltages.Value = 100*complex([2.4018 0 2.3882 0]', ...
+    [-0.0003 0 -0.0063 0]');
+ControlledTransformerCurrents.Value = 10*complex([2.8348 -2.8348 -2.8348 2.8348]', ...
+    [-1.0965 1.0965 1.0965 -1.0965]');
+ControlledTransformerPowers.Value = 10*complex([6.8090 0 -6.7770 0]', ...
+    [2.6327 0 -2.6008 0]');
+VTerminal.Value = 100*complex([2.4018 0 2.3882 0]', ...
+    [-0.0003 0 -0.0063 0]');

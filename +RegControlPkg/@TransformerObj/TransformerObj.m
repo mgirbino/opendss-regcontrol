@@ -293,22 +293,13 @@ classdef TransformerObj < Simulink.Parameter
             obj.buses = p.Results.buses;
             
             obj.xsfName = string.empty;
+            
+            obj = obj.DetermineDeltaDirection;
         end
         
-        function [obj, RotatedPhase] = RotatePhases(obj, IndicatedPhase)
-            %ROTATEPHASES Cycles through transformer's phases and updates
-            %the transformer's DeltaDirection
-            
-            p = inputParser;
-            numchk = {'numeric'};
-            xsfrmrchk = {'Transformer'};
-            posint = {'nonempty','integer','positive'};
-            nempty = {'nonempty'};
-            
-            addRequired(p,'IndicatedPhase',@(x)validateattributes(x,numchk,posint));
-            addRequired(p,'obj',@(x)validateattributes(x,xsfrmrchk,nempty));
-            parse(p,AnotherTransformer);
-                        
+        function obj = DetermineDeltaDirection(obj)
+            %DETERMINEDELTADIRECTION Determines whether rotating
+            %transformer phases happens in forward or reverse direction                        
             
             obj.HVLeadsLV = false;
             % FIRST NEED TO DETERMINE DELTADIRECTION:
@@ -320,37 +311,26 @@ classdef TransformerObj < Simulink.Parameter
                 if obj.Winding(1).kvll >= obj.Winding(2).kvll
                     iHvolt = 1;
                 else
-                    iHVolt = 2;
+                    iHvolt = 2;
                 end
                 switch obj.Winding(iHvolt).Connection
-                    case 0
+                    case Connections.DELTA
                         if obj.HVLeadsLV
-                            obj.DeltaDirection = -1;
+                            obj.DeltaDirection = ...
+                                DeltaDirs.REVERSE;
                         else
-                            obj.DeltaDirection = 1;
+                            obj.DeltaDirection = ...
+                                DeltaDirs.FORWARD;
                         end
-                    case 1
+                    case Connections.WYE
                         if obj.HVLeadsLV
-                            obj.DeltaDirection = 1;
+                            obj.DeltaDirection = ...
+                                DeltaDirs.FORWARD;
                         else
-                            obj.DeltaDirection = -1;
+                            obj.DeltaDirection = ...
+                                DeltaDirs.REVERSE;
                         end
                 end
-            end
-
-            % NOW, ACTUALLY DETERMINE PHASE ROTATION
-            RotatedPhase = p.Results.IndicatedPhase + obj.DeltaDirection;
-
-            % make sure RotatedPhase is within limits:
-            if obj.fNphases > 2
-                % Assumes 2 phase delta is open delta
-                if RotatedPhase > obj.fNphases
-                    RotatedPhase = 1;
-                elseif RotatedPhase < 1
-                    RotatedPhase = obj.fNphases;
-                end
-            elseif RotatedPhase < 1
-                RotatedPhase = 3; % For 2-phase delta, next phase will be 3rd phase
             end
         end
         
