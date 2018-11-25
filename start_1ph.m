@@ -684,6 +684,11 @@ SecVals = TimeVals - 3600*HourVals;
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {} );
 
+xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
+regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
+
+tapPos = zeros(N, length(regNames));
+
 N = 12;
 
 for nn = 1:N
@@ -711,6 +716,12 @@ for nn = 1:N
     % [in ... | out ...]' (complex)
     
     xfms = DSSCircuit.Transformers;
+    
+    for phase = 1:length(xsfNames)
+        xfms.Name = xsfNames{phase};
+        tapPos(nn, phase) = xfms.Tap;
+    end    
+    
     xfms.Name = 'TReg1';
     TReg1.Winding(tw).puTap = double(xfms.Tap);
     
@@ -729,7 +740,12 @@ for nn = 1:N
         RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
         RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
         
-        LastQueue.Value = simOut(nn-1).CurrQueue.signals.values(:,:,:,end);
+        TempLastQueue = zeros(1,5,50);
+        if QueueSize.Data > 0
+            TempLastQueue(:,:,1:QueueSize.Data) = ...
+                simOut(nn-1).CurrQueue.signals.values(:,:,1:QueueSize.Data,end);
+        end
+        LastQueue.Value = TempLastQueue;
         
         HandleTimeLapse( nn-1 ) = Handle.Value;
         QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
@@ -738,7 +754,7 @@ for nn = 1:N
     end
     
     % 4 - obtain control actions from Simulink:    
-    simOut(nn) = sim('queuetest_seventh_static', 'TimeOut', 1000);
+    simOut(nn) = sim('regcontrol_1ph', 'TimeOut', 1000);
     
     TimeElapsed = toc;
     
@@ -757,6 +773,20 @@ for nn = 1:N
 end
 
 DSSText.Command = 'Show Eventlog';
+
+%% Plots 
+
+Time = TimeVals/3600; % converts cumulative seconds to hours
+
+figure(1);
+plot(Time(1:N), tapPos(1:N,1),'-k+');  % black *
+hold on
+plot(Time(1:N), tapPos(1:N,2),'-r+');
+plot(Time(1:N), tapPos(1:N,3),'-b+');
+title('Daily Simulation: Transformer Taps');
+ylabel('Tap Position');
+xlabel('Hour');
+hold off
 
 %% Bootstrap for single-run testing purposes:
 

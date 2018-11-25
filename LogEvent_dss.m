@@ -68,7 +68,7 @@ function LogItem = LogEvent_dss(idx, Hour, Sec, OriginalQueue, AfterExec, ...
             % get the phase/device and mark as used:
             for phase = 1:allphases
                 if startsWith(Device{jj}, regNames{phase}, 'IgnoreCase', true)
-                    LogItem.Device{jj} = Device{jj};
+                    LogItem.Device{jj} = regNames{phase};
                     usedPhases(phase) = true;
                     break;
                 end

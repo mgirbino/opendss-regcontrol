@@ -97,8 +97,6 @@ TimeVals = (24/N)*3600*(1:N); % convert to fraction of 24 hours, then to seconds
 HourVals = floor(TimeVals/3600);
 SecVals = TimeVals - 3600*HourVals;
 
-N = 12;
-
 for nn = 1:N    
     DSSSolution.SolveNoControl;
     DSSSolution.SampleControlDevices;
@@ -136,3 +134,47 @@ for nn = 1:N
 end
 
 DSSText.Command = 'Show Eventlog';
+
+
+%% Plots 
+
+Time = TimeVals/3600; % converts cumulative seconds to hours
+
+figure(1);
+plot(Time, tapPos(:,1),'-k+');  % black *
+hold on
+plot(Time, tapPos(:,2),'-r+');
+plot(Time, tapPos(:,3),'-b+');
+title('Daily Simulation: Transformer Taps');
+ylabel('Tap Position');
+xlabel('Hour');
+hold off
+
+
+
+%%
+deviceIndex = zeros(N,size(regNames,1));
+TapPos1 = zeros(N,1);
+TapPos2 = zeros(N,1);
+TapPos3 = zeros(N,1);
+
+for ii = 1:N
+    for jj = 1:3 %size(EventLog(ii).Device,2)
+        for kk = 1:3 %size(regNames,1)
+            if strcmp(EventLog(ii).Device{jj}, regNames{kk})
+                deviceIndex(ii,kk) = jj;
+            end
+        end
+    end
+    
+    TapPos1(ii) = EventLog(ii).Position{deviceIndex(ii,1)};
+
+    TapPos2(ii) = EventLog(ii).Position{deviceIndex(ii,2)};
+
+    TapPos3(ii) = EventLog(ii).Position{deviceIndex(ii,3)};
+end
+
+
+
+
+
