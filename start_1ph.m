@@ -56,6 +56,12 @@ DSSText.command = TReg3.DSSCommand;
 DSSText.command = RCReg2.DSSCommand;
 DSSText.command = RCReg3.DSSCommand;
 
+xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
+regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
+xsfIncr = [TReg1.Winding(RCReg1.xsfWinding).TapIncrement;
+    TReg2.Winding(RCReg2.xsfWinding).TapIncrement;
+    TReg3.Winding(RCReg3.xsfWinding).TapIncrement];
+
 %% Data packaging for Simulink:
 
 % LastHandle = Simulink.Parameter;
@@ -682,14 +688,12 @@ HourVals = floor(TimeVals/3600);
 SecVals = TimeVals - 3600*HourVals;
 
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
-    'Position', {}, 'TapChange', {} );
+    'Position', {}, 'TapChange', {}, 'Device', {});
 
 xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
 regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
 
 tapPos = zeros(N, length(regNames));
-
-N = 12;
 
 for nn = 1:N
     tic;
@@ -715,12 +719,7 @@ for nn = 1:N
     VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
     % [in ... | out ...]' (complex)
     
-    xfms = DSSCircuit.Transformers;
-    
-    for phase = 1:length(xsfNames)
-        xfms.Name = xsfNames{phase};
-        tapPos(nn, phase) = xfms.Tap;
-    end    
+    xfms = DSSCircuit.Transformers;   
     
     xfms.Name = 'TReg1';
     TReg1.Winding(tw).puTap = double(xfms.Tap);
@@ -729,6 +728,8 @@ for nn = 1:N
     
     % 3 - configure simulation parameters with prinnor timestep's results:    
     TimeInSec.Value = TimeVals(nn);
+    
+    LastQueueToLog = [];
     
     if nn > 1 % there exists an output from a prior iteration
         ReversePending.Value = simOut(nn-1).CurrReversePending.Data;
@@ -740,10 +741,13 @@ for nn = 1:N
         RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
         RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
         
+        CurrQueueSize = simOut(nn-1).QueueSize.Data;
         TempLastQueue = zeros(1,5,50);
-        if QueueSize.Data > 0
-            TempLastQueue(:,:,1:QueueSize.Data) = ...
-                simOut(nn-1).CurrQueue.signals.values(:,:,1:QueueSize.Data,end);
+        LastQueueToLog = [];
+        if CurrQueueSize > 0
+            LastQueueToLog = ...
+                simOut(nn-1).CurrQueue.signals.values(:,:,1:CurrQueueSize,end);
+            TempLastQueue(:,:,1:CurrQueueSize) = LastQueueToLog;
         end
         LastQueue.Value = TempLastQueue;
         
@@ -761,10 +765,15 @@ for nn = 1:N
     % 5 - execute tap changes in DSS:
     xfms.Tap = xfms.Tap + simOut(nn).TapChangeToMake.Data;
     
+    for phase = 1:length(xsfNames)
+        xfms.Name = xsfNames{phase};
+        tapPos(nn, phase) = xfms.Tap;
+    end 
+    
     EventLog(nn) = LogEvent_1ph( nn, HourVals(nn), SecVals(nn), ...
-        ExecutedTimeLapse, simOut(nn).FromQueue.signals.values, ...
-        simOut(nn).TapChangeToMake.Data, ...
-        TapIncrement.Value, double(xfms.Tap) );  
+        simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
+        simOut(nn).FromQueue.signals.values, simOut(nn).TapChangeToMake.Data, ...
+        tapPos, regNames{1}, TapIncrement.Value);  
     
     fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
     

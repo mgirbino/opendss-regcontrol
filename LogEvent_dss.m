@@ -20,7 +20,7 @@ function LogItem = LogEvent_dss(idx, Hour, Sec, OriginalQueue, AfterExec, ...
         for phase = 1:allphases
             LogItem.Action{phase} = 'None';
             LogItem.TapChange{phase} = 0;
-            LogItem.Position{phase} = Position(phase);
+            LogItem.Position{phase} = Position(idx,phase);
             LogItem.Device{phase} = regNames{phase};
         end            
     % CASES 2-4: Something executed because OriginalQueue is nonempty
@@ -111,7 +111,7 @@ function LogItem = LogEvent_dss(idx, Hour, Sec, OriginalQueue, AfterExec, ...
             if ~usedPhases(phase)
                 LogItem.Action{iter+jj} = 'None';
                 LogItem.TapChange{iter+jj} = 0;
-                LogItem.Position{iter+jj} = Position(phase);
+                LogItem.Position{iter+jj} = Position(idx,phase);
                 LogItem.Device{iter+jj} = regNames{phase};
                 jj = jj + 1;
             end
