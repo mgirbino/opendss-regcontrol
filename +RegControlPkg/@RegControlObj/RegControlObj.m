@@ -26,7 +26,6 @@ classdef RegControlObj < Simulink.Parameter
         revLDC_Z % reverse Z value for Beckwith LDC_Z control option
         revR % LDC setting for reverse direction
         revX 
-        revBandwidth
         RevDelay
         revPowerThreshold % 100 kW
         PTRatio % ratio of the PT that converts the controlled winding
@@ -158,7 +157,7 @@ classdef RegControlObj < Simulink.Parameter
             addOptional(p,'fNconds',3,@(x)validateattributes(x,numchk,posint));
             addOptional(p,'fNterms',3,@(x)validateattributes(x,numchk,posint));
             addOptional(p,'fPTphase',1,@(x)validateattributes(x,numchk,posint));
-            addOptional(p,'ElementTerminal',1,@(x)validateattributes(x,numchk,posint));
+            % addOptional(p,'ElementTerminal',1,@(x)validateattributes(x,numchk,posint));
             
             % booleans:
             addOptional(p,'CogenEnabled',false,@(x)validateattributes(x,boolchk,nempty));
@@ -208,7 +207,7 @@ classdef RegControlObj < Simulink.Parameter
             obj.fNconds = p.Results.fNconds;
             obj.fNterms = p.Results.fNterms;
             obj.fPTphase = p.Results.fPTphase;
-            obj.ElementTerminal = p.Results.ElementTerminal;
+            obj.ElementTerminal = p.Results.xsfWinding; % changed to xsfWinding
             
             obj.CogenEnabled = p.Results.CogenEnabled;
             obj.InCogenMode = p.Results.InCogenMode;

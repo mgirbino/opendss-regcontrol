@@ -53,9 +53,9 @@ DSSText.command = TReg1.DSSCommand;
 DSSText.command = TReg2.DSSCommand;
 DSSText.command = TReg3.DSSCommand;
 
-DSSText.command = strcat(RCReg1.DSSCommand, " DebugTrace = Yes");
-DSSText.command = strcat(RCReg2.DSSCommand, " DebugTrace = Yes");
-DSSText.command = strcat(RCReg3.DSSCommand, " DebugTrace = Yes");
+DSSText.command = RCReg1.DSSCommand;
+DSSText.command = RCReg2.DSSCommand;
+DSSText.command = RCReg3.DSSCommand;
 
 xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
 regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
@@ -63,14 +63,87 @@ xsfIncr = [TReg1.Winding(RCReg1.xsfWinding).TapIncrement;
     TReg2.Winding(RCReg2.xsfWinding).TapIncrement;
     TReg3.Winding(RCReg3.xsfWinding).TapIncrement];
 
-%% Looping the simulation (1 run = 1 timestep in DSS)
-
 % Add loadshape:
+LoadShape = csvread('LoadShape1.csv');
+LoadNorm = normalize(LoadShape, 'range');
+
+%% Snapshot approximating Daily Simulation:
+
+DSSText.Command = 'set mode=snapshot controlmode=static';
+
+DSSSolution.MaxControlIterations=30;
+
+N = 96;
+TimeInVals = (24/N)*3600*( (1:N) - 1 ); % for the purpose of starting at zero
+HourInVals = floor(TimeInVals/3600);
+SecInVals = TimeInVals - 3600*HourInVals;
+
+TimeOutVals = (24/N)*3600*(1:N); % starts at 0:900
+HourOutVals = floor(TimeOutVals/3600);
+SecOutVals = TimeInVals - 3600*HourOutVals;
+
+tapPos = zeros(N, length(regNames));
+VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
+CurrentsInOut = zeros(3,2,N);
+
+for nn = 1:N
+    DSSSolution.LoadMult = LoadNorm(nn); % new loadshape per iteration
+    
+    DSSSolution.Hour = HourInVals(nn); % controlling clock
+    DSSSolution.Seconds = SecInVals(nn);
+    
+    DSSSolution.InitSnap;
+
+    MyControlIterations = 0;
+
+    while MyControlIterations < DSSSolution.MaxControlIterations
+        DSSSolution.SolveNoControl;
+        % display the result
+        disp(['Result='  DSSText.Result])
+
+        if DSSSolution.Converged 
+           a = ['Solution Converged in ' num2str(DSSSolution.Iterations) ' iterations.'];
+        else
+           a = 'Solution did not Converge';
+        end
+        disp(a)    
+
+        DSSSolution.SampleControlDevices;
+        DSSSolution.DoControlActions;
+
+        if DSSSolution.ControlActionsDone, break, end 
+
+        MyControlIterations = MyControlIterations + 1;
+    end
+    
+    % update all tap positions:
+    xf_trans = DSSCircuit.Transformers;
+    
+    for phase = 1:length(regNames)
+        xf_trans.Name = xsfNames{phase};
+        DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
+        xf_ckt = DSSCircuit.ActiveCktElement;
+        tapPos(nn, phase) = xf_trans.Tap;
+        
+        tempVolts = abs(MakeComplex(xf_ckt.Voltages));
+        tempCurr = abs(MakeComplex(xf_ckt.Currents)); 
+        VoltagesInOut(phase,1,nn) = tempVolts(1);
+        VoltagesInOut(phase,2,nn) = tempVolts(3);
+        CurrentsInOut(phase,1,nn) = tempCurr(1);
+        CurrentsInOut(phase,2,nn) = tempCurr(3);
+    end
+end
+
+DSSText.Command = 'Show Eventlog';
+
+%% Daily Simulation:
+DSSText.Command = 'set mode=daily stepsize=15m number=1 controlmode=time';
+
 DSSText.Command = 'New LoadShape.LoadShape2a npts=96 interval=0.25';
 DSSCircuit.LoadShape.name = 'LoadShape2a';
 ls = csvread('LoadShape1.csv');
 feature('COM_SafeArraySingleDim',1);
-DSSCircuit.LoadShape.pmult =  ls;
+DSSCircuit.LoadShape.pmult =  LoadNorm;
 feature('COM_SafeArraySingleDim',0);
 
 % Apply loadshape to daily simulation:
@@ -81,74 +154,39 @@ while iLoad>0
     iLoad = DSSLoads.Next;
 end
 
-% Solve for a daily simulation:
-DSSText.Command = 'set mode=daily stepsize=15m number=96 controlmode=static';
-% number of solns to perform for Monte Carlo/daily load simulations
-DSSText.Command = 'Set number=1';  % Still in Daily mode; each Solve does 15 min
-
-EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
-    'Position', {}, 'TapChange', {}, 'Device', {});
-
 N = 96;
+TimeInVals = (24/N)*3600*(1:N);
+HourInVals = floor(TimeInVals/3600);
+SecInVals = TimeInVals - 3600*HourInVals;
 
-tapPos = zeros(N, length(regNames));
+ts = zeros(N,1);
 
-TimeVals = (24/N)*3600*(1:N); % convert to fraction of 24 hours, then to seconds
-HourVals = floor(TimeVals/3600);
-SecVals = TimeVals - 3600*HourVals;
-
-VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
-CurrentsInOut = zeros(3,2,N);
-
-for nn = 1:N    
-    DSSSolution.SolveNoControl;
-    DSSSolution.SampleControlDevices;
-    
-    CtrlQueueFile = ...
-            'C:\Users\Michael Girbino\Documents\13Node Matlab OpenDSS\IEEE13Nodeckt_ControlQueue.csv';
-    
-    RawOriginal = cell(1,6);
-    qs_original = DSSCircuit.CtrlQueue.QueueSize;
-    if qs_original >= 1 % parse the Queue if it isn't empty
-        DSSText.Command = 'Show Control Queue';	
-        RawOriginal = parseCSV(CtrlQueueFile);
-    end
-    
-    DSSSolution.Solve;
-    
-    RawAfterward = cell(1,6);
-    qs_afterward = DSSCircuit.CtrlQueue.QueueSize;
-    if qs_afterward >= 1 % parse the Queue if it isn't empty
-        DSSText.Command = 'Show Control Queue';
-        RawAfterward = parseCSV(CtrlQueueFile);
-    end
-    
+for nn = 1:N
+    ts(nn) = DSSSolution.Seconds;
+    DSSSolution.Solve; % time starts at zero before solution, is advanced afterward
     % update all tap positions:
-    xsfm = DSSCircuit.Transformers;
+    xf_trans = DSSCircuit.Transformers;
     
     for phase = 1:length(regNames)
-        xsfm.Name = xsfNames{phase};
-        tapPos(nn, phase) = xsfm.Tap;
+        xf_trans.Name = xsfNames{phase};
+        DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
+        xf_ckt = DSSCircuit.ActiveCktElement;
+        tapPos(nn, phase) = xf_trans.Tap;
         
-        tempVolts = abs(MakeComplex(xsfm.Voltages));
-        tempCurr = abs(MakeComplex(xsfm.Currents)); 
+        tempVolts = abs(MakeComplex(xf_ckt.Voltages));
+        tempCurr = abs(MakeComplex(xf_ckt.Currents)); 
         VoltagesInOut(phase,1,nn) = tempVolts(1);
         VoltagesInOut(phase,2,nn) = tempVolts(3);
         CurrentsInOut(phase,1,nn) = tempCurr(1);
         CurrentsInOut(phase,2,nn) = tempCurr(3);
     end
-    
-    EventLog(nn) = LogEvent_dss( nn, HourVals(nn), SecVals(nn), ... 
-        RawOriginal, RawAfterward, ...
-        tapPos, regNames, xsfIncr);
 end
 
 DSSText.Command = 'Show Eventlog';
 
-
 %% Plots 
 
-Time = TimeVals/3600; % converts cumulative seconds to hours
+Time = TimeOutVals/3600; % converts cumulative seconds to hours
 
 figure(1);
 plot(Time, tapPos(:,1),'-k+');  % black *
@@ -206,28 +244,22 @@ ylabel('Voltage');
 xlabel('Hour');
 hold off
 
+%% Daily analysis:
 
-%%
-deviceIndex = zeros(N,size(regNames,1));
-TapPos1 = zeros(N,1);
-TapPos2 = zeros(N,1);
-TapPos3 = zeros(N,1);
+DSSText.Command = 'set mode=daily';
+DSSSolution.Solve;
 
-for ii = 1:N
-    for jj = 1:3 %size(EventLog(ii).Device,2)
-        for kk = 1:3 %size(regNames,1)
-            if strcmp(EventLog(ii).Device{jj}, regNames{kk})
-                deviceIndex(ii,kk) = jj;
-            end
-        end
-    end
+%% 2-day analysis:
+
+DSSText.Command = 'Set number=1';  % Still in Daily mode, but each Solve does one hour
     
-    TapPos1(ii) = EventLog(ii).Position{deviceIndex(ii,1)};
-
-    TapPos2(ii) = EventLog(ii).Position{deviceIndex(ii,2)};
-
-    TapPos3(ii) = EventLog(ii).Position{deviceIndex(ii,3)};
+% we'll actually run this for 48 hrs (2 days) to make a more interesting plot 
+for i=1:48
+    DSSSolution.Solve;
 end
+
+
+
 
 
 

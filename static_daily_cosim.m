@@ -53,6 +53,7 @@ DSSText.command = TReg1.DSSCommand;
 DSSText.command = TReg2.DSSCommand;
 DSSText.command = TReg3.DSSCommand;
 
+DSSText.command = RCReg1.DSSCommand;
 DSSText.command = RCReg2.DSSCommand;
 DSSText.command = RCReg3.DSSCommand;
 
@@ -651,28 +652,28 @@ StatesElems(8).Complexity = 'real';
 StatesBus = Simulink.Bus;
 StatesBus.Elements = StatesElems;
 
-%% Looping the simulation (1 run = 1 timestep in DSS)
+%% Snapshot approximating Daily Simulation:
 
 % Add loadshape:
-DSSText.Command = 'New LoadShape.LoadShape2a npts=96 interval=0.25';
-DSSCircuit.LoadShape.name = 'LoadShape2a';
-ls = csvread('LoadShape1.csv');
-feature('COM_SafeArraySingleDim',1);
-DSSCircuit.LoadShape.pmult =  ls;
-feature('COM_SafeArraySingleDim',0);
+LoadShape = csvread('LoadShape1.csv');
+LoadNorm = normalize(LoadShape, 'range');
 
-% Apply loadshape to daily simulation:
-DSSLoads = DSSCircuit.Loads;
-iLoad = DSSLoads.First;
-while iLoad>0
-    DSSLoads.daily = 'LoadShape2a';
-    iLoad = DSSLoads.Next;
-end
+DSSText.Command = 'set mode=snapshot controlmode=static';
 
-% Solve for a daily simulation:
-DSSText.Command = 'set mode=daily stepsize=15m number=96 controlmode=static';
+DSSSolution.MaxControlIterations=30;
 
+% time-keeping:
 N = 96;
+TimeInVals = (24/N)*3600*( (1:N) - 1 ); % for the purpose of starting at zero
+HourInVals = floor(TimeInVals/3600);
+SecInVals = TimeInVals - 3600*HourInVals;
+
+TimeOutVals = (24/N)*3600*(1:N); % starts at 0:900
+HourOutVals = floor(TimeOutVals/3600);
+SecOutVals = TimeInVals - 3600*HourOutVals;
+
+% signal logging:
+
 simOut = repmat(Simulink.SimulationOutput, N, 1);
 LastQueue.Value = zeros(1,5,50);
 % LastHandle.Value = 1;
@@ -681,125 +682,148 @@ QueueTimeLapse = zeros(1,5,50,N);
 ExecutedTimeLapse = zeros(1,5,N); % last executed item, updated on each iteration
 HandleTimeLapse = zeros(N,1);
 
-TimeVals = (24/N)*3600*(1:N);
-HourVals = floor(TimeVals/3600);
-SecVals = TimeVals - 3600*HourVals;
+tapPos = zeros(N, length(regNames));
+VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
+CurrentsInOut = zeros(3,2,N);
 
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
-regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
-
-tapPos = zeros(N, length(regNames));
-
-VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
-CurrentsInOut = zeros(3,2,N);
-
 for nn = 1:N
     tic;
-    % 1 - Obtain power flow from DSS:
-    DSSSolution.SolveNoControl;
     
-    % 2 - Package DSS measurements for Simulink:
-    DSSCircuit.SetActiveElement('Transformer.TReg1');
-    xfm1 = DSSCircuit.ActiveCktElement;
+    DSSSolution.LoadMult = LoadNorm(nn); % new loadshape per iteration
+    
+    DSSSolution.Hour = HourInVals(nn); % controlling clock
+    DSSSolution.Seconds = SecInVals(nn);
+    
+    DSSSolution.InitSnap;
 
-    ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
-    % [in ... | out ...]' (complex)
+    MyControlIterations = 0;
 
-    ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
-    % [in ... | out ...]' (complex)
-
-    ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
-    % [in ... | out ...]' (complex)
-
-    DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
-    RegulatedBus = DSSCircuit.ActiveCktElement;
-
-    VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
-    % [in ... | out ...]' (complex)
-    
-    xfms = DSSCircuit.Transformers;   
-    
-    xfms.Name = 'TReg1';
-    TReg1.Winding(tw).puTap = double(xfms.Tap);
-    
-    PresentTap.Value = double(TReg1.Winding(tw).puTap); 
-    
-    % 3 - configure simulation parameters with prinnor timestep's results:    
-    TimeInSec.Value = TimeVals(nn);
-    
-    LastQueueToLog = [];
-    
-    if nn > 1 % there exists an output from a prior iteration
-        ReversePending.Value = simOut(nn-1).CurrReversePending.Data;
-        InCogenMode.Value = simOut(nn-1).CurrInCogenMode.Data;
-        InReverseMode.Value = simOut(nn-1).CurrInReverseMode.Data;
-        LookingForward.Value = simOut(nn-1).CurrLookingForward.Data;
-        Armed.Value = simOut(nn-1).CurrArmed.Data;       
-        Handle.Value = simOut(nn-1).CurrHandle.Data;
-        RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
-        RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
+    while MyControlIterations < DSSSolution.MaxControlIterations
+        DSSSolution.SolveNoControl;
         
-        CurrQueueSize = simOut(nn-1).QueueSize.Data;
-        TempLastQueue = zeros(1,5,50);
+        % 2 - Package DSS measurements for Simulink:
+        DSSCircuit.SetActiveElement('Transformer.TReg1');
+        xfm1 = DSSCircuit.ActiveCktElement;
+
+        ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
+        % [in ... | out ...]' (complex)
+
+        ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
+        % [in ... | out ...]' (complex)
+
+        ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
+        % [in ... | out ...]' (complex)
+
+        DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
+        RegulatedBus = DSSCircuit.ActiveCktElement;
+
+        VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
+        % [in ... | out ...]' (complex)
+        
+        xfms = DSSCircuit.Transformers;   
+    
+        xfms.Name = 'TReg1';
+        TReg1.Winding(tw).puTap = double(xfms.Tap);
+
+        PresentTap.Value = double(TReg1.Winding(tw).puTap); 
+
+        % 3 - configure simulation parameters with prinnor timestep's results:    
+        TimeInSec.Value = TimeInVals(nn);
+        
         LastQueueToLog = [];
-        if CurrQueueSize > 0
-            LastQueueToLog = ...
-                simOut(nn-1).CurrQueue.signals.values(:,:,1:CurrQueueSize,end);
-            TempLastQueue(:,:,1:CurrQueueSize) = LastQueueToLog;
+    
+        if nn > 1 % there exists an output from a prior iteration
+            ReversePending.Value = simOut(nn-1).CurrReversePending.Data;
+            InCogenMode.Value = simOut(nn-1).CurrInCogenMode.Data;
+            InReverseMode.Value = simOut(nn-1).CurrInReverseMode.Data;
+            LookingForward.Value = simOut(nn-1).CurrLookingForward.Data;
+            Armed.Value = simOut(nn-1).CurrArmed.Data;       
+            Handle.Value = simOut(nn-1).CurrHandle.Data;
+            RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
+            RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
+
+            CurrQueueSize = simOut(nn-1).QueueSize.Data;
+            TempLastQueue = zeros(1,5,50);
+            LastQueueToLog = [];
+            if CurrQueueSize > 0
+                LastQueueToLog = ...
+                    simOut(nn-1).CurrQueue.signals.values(:,:,1:CurrQueueSize,end);
+                TempLastQueue(:,:,1:CurrQueueSize) = LastQueueToLog;
+            end
+            LastQueue.Value = TempLastQueue;
+
+            HandleTimeLapse( nn-1 ) = Handle.Value;
+            QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
+            ExecutedTimeLapse( :,:,(nn-1) ) = ...
+                simOut(nn-1).FromQueue.signals.values(:,:,end); % based on latest addition to the Queue
         end
-        LastQueue.Value = TempLastQueue;
         
-        HandleTimeLapse( nn-1 ) = Handle.Value;
-        QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
-        ExecutedTimeLapse( :,:,(nn-1) ) = ...
-            simOut(nn-1).FromQueue.signals.values(:,:,end); % based on latest addition to the Queue
+        % 4 - obtain control actions from Simulink:    
+        simOut(nn) = sim('regcontrol_1ph', 'TimeOut', 1000);
+
+        TimeElapsed = toc;
+
+        % 5 - execute tap changes in DSS:
+        xfms.Tap = xfms.Tap + simOut(nn).TapChangeToMake.Data;
+        
+        % display the result
+        disp(['Result='  DSSText.Result])
+
+        if DSSSolution.Converged 
+           a = ['Solution Converged in ' num2str(DSSSolution.Iterations) ' iterations.'];
+        else
+           a = 'Solution did not Converge';
+        end
+        disp(a)    
+
+        DSSSolution.SampleControlDevices;
+        DSSSolution.DoControlActions;
+    
+        fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
+
+        if DSSSolution.ControlActionsDone, break, end 
+
+        MyControlIterations = MyControlIterations + 1;
     end
     
-    % 4 - obtain control actions from Simulink:    
-    simOut(nn) = sim('regcontrol_1ph', 'TimeOut', 1000);
+    % update all tap positions:
+    xf_trans = DSSCircuit.Transformers;
     
-    TimeElapsed = toc;
-    
-    % 5 - execute tap changes in DSS:
-    xfms.Tap = xfms.Tap + simOut(nn).TapChangeToMake.Data;
-    
-    for phase = 1:length(xsfNames)
-        xfms.Name = xsfNames{phase};
-        tapPos(nn, phase) = xfms.Tap;
+    for phase = 1:length(regNames)
+        xf_trans.Name = xsfNames{phase};
+        DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
+        xf_ckt = DSSCircuit.ActiveCktElement;
+        tapPos(nn, phase) = xf_trans.Tap;
         
-        tempVolts = abs(MakeComplex(xfm1.Voltages));
-        tempCurr = abs(MakeComplex(xfm1.Currents)); 
+        tempVolts = abs(MakeComplex(xf_ckt.Voltages));
+        tempCurr = abs(MakeComplex(xf_ckt.Currents)); 
         VoltagesInOut(phase,1,nn) = tempVolts(1);
         VoltagesInOut(phase,2,nn) = tempVolts(3);
         CurrentsInOut(phase,1,nn) = tempCurr(1);
         CurrentsInOut(phase,2,nn) = tempCurr(3);
-    end 
+    end
     
-    EventLog(nn) = LogEvent_1ph( nn, HourVals(nn), SecVals(nn), ...
+    % may move to inner loop when control iterations is implemented:
+    EventLog(nn) = LogEvent_1ph( nn, HourOutVals(nn), SecOutVals(nn), ...
         simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
         simOut(nn).FromQueue.signals.values, simOut(nn).TapChangeToMake.Data, ...
         tapPos, regNames{1}, TapIncrement.Value);  
-    
-    fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
-    
-    % 5 - Power flow after control actions:    
-    DSSSolution.Solve;
 end
 
 DSSText.Command = 'Show Eventlog';
 
 %% Plots 
 
-Time = TimeVals/3600; % converts cumulative seconds to hours
+Time = TimeOutVals/3600; % converts cumulative seconds to hours
 
 figure(1);
-plot(Time(1:N), tapPos(1:N,1),'-k+');  % black *
+plot(Time, tapPos(:,1),'-k+');  % black *
 hold on
-plot(Time(1:N), tapPos(1:N,2),'-r+');
-plot(Time(1:N), tapPos(1:N,3),'-b+');
+plot(Time, tapPos(:,2),'-r+');
+plot(Time, tapPos(:,3),'-b+');
 title('Daily Simulation: Transformer Taps');
 ylabel('Tap Position');
 xlabel('Hour');
@@ -851,21 +875,9 @@ ylabel('Voltage');
 xlabel('Hour');
 hold off
 
-%% Bootstrap for single-run testing purposes:
 
-LastQueue.Value = zeros(1,5,50);
-N = 96;
-TimeVals = (24/N)*3600*(1:N);
-HourVals = floor(TimeVals/3600);
-SecVals = TimeVals - 3600*HourVals;
 
-TimeInSec.Value = TimeVals(1);
 
-ControlledTransformerVoltages.Value = 100*complex([2.4018 0 2.3882 0]', ...
-    [-0.0003 0 -0.0063 0]');
-ControlledTransformerCurrents.Value = 10*complex([2.8348 -2.8348 -2.8348 2.8348]', ...
-    [-1.0965 1.0965 1.0965 -1.0965]');
-ControlledTransformerPowers.Value = 10*complex([6.8090 0 -6.7770 0]', ...
-    [2.6327 0 -2.6008 0]');
-VTerminal.Value = 100*complex([2.4018 0 2.3882 0]', ...
-    [-0.0003 0 -0.0063 0]');
+
+
+
