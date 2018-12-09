@@ -1,5 +1,5 @@
 function LogItem = LogEvent_1ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
-    AfterExec, TapChangeToMake, Position, regName, TapIncrement)
+    AfterExec, TapChangeToMake, Position, regName, TapIncrement, ControlIter)
 %LOGEVENT_1PH Logs events into readable format
 %   Compares the control queue before and after executing control actions
 %   to determine which events occurred and must be logged (OriginalQueue
@@ -12,7 +12,7 @@ function LogItem = LogEvent_1ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
 %   differently and are enumerated in NewCtrlQueueFields
     LogItem.Hour = Hour;
     LogItem.Sec = Sec;
-    LogItem.ControlIter = 1; % might change
+    LogItem.ControlIter = ControlIter; % might change
     
     % idea is to easily adapt to 3-phase mode:
     regNames = {regName};
