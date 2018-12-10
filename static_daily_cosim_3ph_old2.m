@@ -68,23 +68,44 @@ TimeInSec.DataType = 'double';
 LastQueue = Simulink.Parameter;
 LastQueue.DataType = 'double';
 
-ControlledTransformerVoltages = Simulink.Parameter;
-ControlledTransformerVoltages.DataType = 'double';
-ControlledTransformerVoltages.Value = zeros(4,3); % pre-allocation
+% Phase 1:
+ControlledTransformerVoltages1 = Simulink.Parameter;
+ControlledTransformerVoltages1.DataType = 'double';
 
-ControlledTransformerCurrents = Simulink.Parameter;
-ControlledTransformerCurrents.DataType = 'double';
-ControlledTransformerCurrents.Value = zeros(4,3); % pre-allocation
+ControlledTransformerCurrents1 = Simulink.Parameter;
+ControlledTransformerCurrents1.DataType = 'double';
 
-ControlledTransformerPowers = Simulink.Parameter;
-ControlledTransformerPowers.DataType = 'double';
-ControlledTransformerPowers.Value = zeros(4,3); % pre-allocation
+ControlledTransformerPowers1 = Simulink.Parameter;
+ControlledTransformerPowers1.DataType = 'double';
 
-VTerminal = Simulink.Parameter;
-VTerminal.DataType = 'double';
-VTerminal.Value = zeros(4,3); % pre-allocation
+VTerminal1 = Simulink.Parameter;
+VTerminal1.DataType = 'double';
 
-% Bus:
+% Phase 2:
+ControlledTransformerVoltages2 = Simulink.Parameter;
+ControlledTransformerVoltages2.DataType = 'double';
+
+ControlledTransformerCurrents2 = Simulink.Parameter;
+ControlledTransformerCurrents2.DataType = 'double';
+
+ControlledTransformerPowers2 = Simulink.Parameter;
+ControlledTransformerPowers2.DataType = 'double';
+
+VTerminal2 = Simulink.Parameter;
+VTerminal2.DataType = 'double';
+
+% Phase 3:
+ControlledTransformerVoltages3 = Simulink.Parameter;
+ControlledTransformerVoltages3.DataType = 'double';
+
+ControlledTransformerCurrents3 = Simulink.Parameter;
+ControlledTransformerCurrents3.DataType = 'double';
+
+ControlledTransformerPowers3 = Simulink.Parameter;
+ControlledTransformerPowers3.DataType = 'double';
+
+VTerminal3 = Simulink.Parameter;
+VTerminal3.DataType = 'double';
 
 SignalElems(1) = Simulink.BusElement;
 SignalElems(1).Name = 'ControlledTransformerVoltages';
@@ -381,9 +402,9 @@ EquipElems(21).DataType = 'double';
 EquipElems(21).SampleTime = -1;
 EquipElems(21).Complexity = 'real';
 
-% PresentTap = Simulink.Parameter;
-% PresentTap.DataType = 'double';
-% PresentTap.Value = double(TReg1.Winding(tw).puTap); 
+PresentTap = Simulink.Parameter;
+PresentTap.DataType = 'double';
+PresentTap.Value = double(TReg1.Winding(tw).puTap); 
 
 EquipElems(22) = Simulink.BusElement; % unused, replaced with PresentTap as previous state
 EquipElems(22).Name = 'PresentTap';
@@ -541,44 +562,119 @@ EquipmentBus = Simulink.Bus;
 EquipmentBus.Elements = EquipElems;
 
 % ongoing system states:
+% Phase 1:
 
-ReversePending = Simulink.Parameter;
-ReversePending.DataType = 'boolean';
-ReversePending.Value = false(3,1);
+ReversePending1 = Simulink.Parameter;
+ReversePending1.DataType = 'boolean';
+ReversePending1.Value = false;
 
-InCogenMode = Simulink.Parameter;
-InCogenMode.DataType = 'boolean';
-InCogenMode.Value = false(3,1);
+InCogenMode1 = Simulink.Parameter;
+InCogenMode1.DataType = 'boolean';
+InCogenMode1.Value = false;
 
-InReverseMode = Simulink.Parameter;
-InReverseMode.DataType = 'boolean';
-InReverseMode.Value = false(3,1);
+InReverseMode1 = Simulink.Parameter;
+InReverseMode1.DataType = 'boolean';
+InReverseMode1.Value = false;
 
-LookingForward = Simulink.Parameter;
-LookingForward.DataType = 'boolean';
-LookingForward.Value = false(3,1);
+LookingForward1 = Simulink.Parameter;
+LookingForward1.DataType = 'boolean';
+LookingForward1.Value = false;
 
-Armed = Simulink.Parameter;
-Armed.DataType = 'boolean';
-Armed.Value = false(3,1);
+Armed1 = Simulink.Parameter;
+Armed1.DataType = 'boolean';
+Armed1.Value = false;
 
-Handle = Simulink.Parameter;
-Handle.DataType = 'uint8';
-Handle.Value = zeros(3,1);
+Handle1 = Simulink.Parameter;
+Handle1.DataType = 'uint8';
+Handle1.Value = 0;
 
-RevHandle = Simulink.Parameter;
-RevHandle.DataType = 'uint8';
-RevHandle.Value = zeros(3,1);
+RevHandle1 = Simulink.Parameter;
+RevHandle1.DataType = 'uint8';
+RevHandle1.Value = 0;
 
-RevBackHandle = Simulink.Parameter;
-RevBackHandle.DataType = 'uint8';
-RevBackHandle.Value = zeros(3,1);
+RevBackHandle1 = Simulink.Parameter;
+RevBackHandle1.DataType = 'uint8';
+RevBackHandle1.Value = 0;
 
-PresentTap = Simulink.Parameter;
-PresentTap.DataType = 'double';
-PresentTap.Value = [double(TReg1.Winding(tw).puTap);
-    double(TReg2.Winding(tw).puTap);
-    double(TReg3.Winding(tw).puTap)];
+PresentTap1 = Simulink.Parameter;
+PresentTap1.DataType = 'double';
+PresentTap1.Value = double(TReg1.Winding(tw).puTap); % specific to transformer
+
+% Phase2:
+
+ReversePending2 = Simulink.Parameter;
+ReversePending2.DataType = 'boolean';
+ReversePending2.Value = false;
+
+InCogenMode2 = Simulink.Parameter;
+InCogenMode2.DataType = 'boolean';
+InCogenMode2.Value = false;
+
+InReverseMode2 = Simulink.Parameter;
+InReverseMode2.DataType = 'boolean';
+InReverseMode2.Value = false;
+
+LookingForward2 = Simulink.Parameter;
+LookingForward2.DataType = 'boolean';
+LookingForward2.Value = false;
+
+Armed2 = Simulink.Parameter;
+Armed2.DataType = 'boolean';
+Armed2.Value = false;
+
+Handle2 = Simulink.Parameter;
+Handle2.DataType = 'uint8';
+Handle2.Value = 0;
+
+RevHandle2 = Simulink.Parameter;
+RevHandle2.DataType = 'uint8';
+RevHandle2.Value = 0;
+
+RevBackHandle2 = Simulink.Parameter;
+RevBackHandle2.DataType = 'uint8';
+RevBackHandle2.Value = 0;
+
+PresentTap2 = Simulink.Parameter;
+PresentTap2.DataType = 'double';
+PresentTap2.Value = double(TReg2.Winding(tw).puTap); % specific to transformer 
+
+% Phase 3:
+
+ReversePending3 = Simulink.Parameter;
+ReversePending3.DataType = 'boolean';
+ReversePending3.Value = false;
+
+InCogenMode3 = Simulink.Parameter;
+InCogenMode3.DataType = 'boolean';
+InCogenMode3.Value = false;
+
+InReverseMode3 = Simulink.Parameter;
+InReverseMode3.DataType = 'boolean';
+InReverseMode3.Value = false;
+
+LookingForward3 = Simulink.Parameter;
+LookingForward3.DataType = 'boolean';
+LookingForward3.Value = false;
+
+Armed3 = Simulink.Parameter;
+Armed3.DataType = 'boolean';
+Armed3.Value = false;
+
+Handle3 = Simulink.Parameter;
+Handle3.DataType = 'uint8';
+Handle3.Value = 0;
+
+RevHandle3 = Simulink.Parameter;
+RevHandle3.DataType = 'uint8';
+RevHandle3.Value = 0;
+
+RevBackHandle3 = Simulink.Parameter;
+RevBackHandle3.DataType = 'uint8';
+RevBackHandle3.Value = 0;
+
+PresentTap3 = Simulink.Parameter;
+PresentTap3.DataType = 'double';
+PresentTap3.Value = double(TReg3.Winding(tw).puTap); % specific to transformer
 
 % Bus:
 
@@ -710,56 +806,45 @@ for nn = 1:N
         DSSSolution.SolveNoControl;
         
         % 2 - Package DSS measurements for Simulink:
-        xf_trans = DSSCircuit.Transformers;
-        for phase = 1:3
-            DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
-            xf_ckt = DSSCircuit.ActiveCktElement;
-            
-            ControlledTransformerVoltages.Value(:,phase) = MakeComplex(xf_ckt.Voltages); 
-            % [in ... | out ...]' (complex)
+        DSSCircuit.SetActiveElement('Transformer.TReg1');
+        xfm1 = DSSCircuit.ActiveCktElement;
 
-            ControlledTransformerCurrents.Value(:,phase) = MakeComplex(xf_ckt.Currents); 
-            % [in ... | out ...]' (complex)
+        ControlledTransformerVoltages.Value = MakeComplex(xfm1.Voltages); 
+        % [in ... | out ...]' (complex)
 
-            ControlledTransformerPowers.Value(:,phase) = MakeComplex(xf_ckt.Powers); 
-            % [in ... | out ...]' (complex)
+        ControlledTransformerCurrents.Value = MakeComplex(xfm1.Currents); 
+        % [in ... | out ...]' (complex)
 
-            % this would come from a separate tranformer if UsingRegulatedBus:
-            VTerminal.Value(:,phase) = MakeComplex(xf_ckt.Voltages);
-            % [in ... | out ...]' (complex)
-            
-            xf_trans.Name = xsfNames{phase};            
-            PresentTap.Value(phase) = double(xf_trans.Tap); 
-            % foregoing storage in TReg.Winding(tw).puTap
-        end        
+        ControlledTransformerPowers.Value = MakeComplex(xfm1.Powers); 
+        % [in ... | out ...]' (complex)
 
-        % 3 - configure simulation parameters with prior timestep's results:    
+        DSSCircuit.SetActiveElement('Transformer.TReg1'); % assume this is at the regulated bus
+        RegulatedBus = DSSCircuit.ActiveCktElement;
+
+        VTerminal.Value = MakeComplex(RegulatedBus.Voltages); 
+        % [in ... | out ...]' (complex)
+        
+        xfms = DSSCircuit.Transformers;   
+    
+        xfms.Name = 'TReg1';
+        TReg1.Winding(tw).puTap = double(xfms.Tap);
+
+        PresentTap.Value = double(TReg1.Winding(tw).puTap); 
+
+        % 3 - configure simulation parameters with prinnor timestep's results:    
         TimeInSec.Value = TimeInVals(nn);
         
         LastQueueToLog = [];
     
         if nn > 1 % there exists an output from a prior iteration
-            for phase = 1:3
-                % select bus source of TimeSeries data:
-                switch phase
-                    case 1
-                        tempOut = simOut(nn-1).Curr1;
-                    case 2
-                        tempOut = simOut(nn-1).Curr2;
-                    case 3
-                        tempOut = simOut(nn-1).Curr3;
-                end
-                
-                ReversePending.Value(phase) = tempOut.ReversePending.Data;
-                InCogenMode.Value(phase) = tempOut.InCogenMode.Data;
-                InReverseMode.Value(phase) = tempOut.InReverseMode.Data;
-                LookingForward.Value(phase) = tempOut.LookingForward.Data;
-                Armed.Value(phase) = tempOut.Armed.Data;       
-                Handle.Value(phase) = tempOut.Handle.Data;
-                RevHandle.Value(phase) = tempOut.RevHandle.Data;
-                RevBackHandle.Value(phase) = tempOut.RevBackHandle.Data;
-%                 PresentTap.Value(phase) = tempOut.PresentTap.Data;            
-            end
+            ReversePending.Value = simOut(nn-1).CurrReversePending.Data;
+            InCogenMode.Value = simOut(nn-1).CurrInCogenMode.Data;
+            InReverseMode.Value = simOut(nn-1).CurrInReverseMode.Data;
+            LookingForward.Value = simOut(nn-1).CurrLookingForward.Data;
+            Armed.Value = simOut(nn-1).CurrArmed.Data;       
+            Handle.Value = simOut(nn-1).CurrHandle.Data;
+            RevHandle.Value = simOut(nn-1).CurrRevHandle.Data;
+            RevBackHandle.Value = simOut(nn-1).CurrRevBackHandle.Data;
 
             CurrQueueSize = simOut(nn-1).QueueSize.Data;
             TempLastQueue = zeros(1,5,50);
@@ -783,16 +868,7 @@ for nn = 1:N
         TimeElapsed = toc;
 
         % 5 - execute tap changes in DSS:
-        TapChangesMade = [simOut(nn).TapChangeToMake1.Data;
-            simOut(nn).TapChangeToMake2.Data;
-            simOut(nn).TapChangeToMake3.Data];
-        
-        xf_trans.Name = xsfNames{1};
-        xf_trans.Tap = xf_trans.Tap + TapChangesMade(1);
-        xf_trans.Name = xsfNames{2};
-        xf_trans.Tap = xf_trans.Tap + TapChangesMade(2);
-        xf_trans.Name = xsfNames{3};
-        xf_trans.Tap = xf_trans.Tap + TapChangesMade(3);
+        xfms.Tap = xfms.Tap + simOut(nn).TapChangeToMake.Data;
         
         % display the result
         disp(['Result='  DSSText.Result])
@@ -804,13 +880,13 @@ for nn = 1:N
         end
         disp(a)    
 
-%         DSSSolution.SampleControlDevices;
-%         DSSSolution.DoControlActions;
+        DSSSolution.SampleControlDevices;
+        DSSSolution.DoControlActions;
         
-        Logged = LogEvent_3ph( nn, HourOutVals(nn), SecOutVals(nn), ...
+        Logged = LogEvent_1ph( nn, HourOutVals(nn), SecOutVals(nn), ...
             simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
-            simOut(nn).FromQueue.signals.values, TapChangesMade, ...
-            tapPos, regNames, TapIncrement.Value, CtrlIter);
+            simOut(nn).FromQueue.signals.values, simOut(nn).TapChangeToMake.Data, ...
+            tapPos, regNames{1}, TapIncrement.Value, CtrlIter);
         
         if CtrlIter == 0
               EventLog(nn) = Logged;
@@ -822,13 +898,15 @@ for nn = 1:N
     
         fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
 
-        if simOut(nn).ControlActionsDone.Data, break, end 
+        if DSSSolution.ControlActionsDone, break, end 
 
         CtrlIter = CtrlIter + 1;
     end
     
-    % update all tap positions:    
-    for phase = 1:3
+    % update all tap positions:
+    xf_trans = DSSCircuit.Transformers;
+    
+    for phase = 1:length(regNames)
         xf_trans.Name = xsfNames{phase};
         DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
         xf_ckt = DSSCircuit.ActiveCktElement;
