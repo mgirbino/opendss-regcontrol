@@ -683,9 +683,12 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 2;
+N = 96;
 
 for nn = 1:N
+    if nn == 8
+        nn;
+    end
     tic;
     
     DSSSolution.LoadMult = LoadNorm(nn); % new loadshape per iteration
@@ -847,7 +850,7 @@ plot(Time(1:N), tapPos(1:N,1),'-k+');  % black *
 hold on
 plot(Time(1:N), tapPos(1:N,2),'-r+');
 plot(Time(1:N), tapPos(1:N,3),'-b+');
-title('Daily Simulation: Transformer Taps');
+title('Transformer Taps (Stateflow RegControl Emulation, All Phases)');
 ylabel('Tap Position');
 xlabel('Hour');
 hold off
@@ -859,7 +862,7 @@ plot(Time(1:N), Vin(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Vin(2,1:N),'-r+');
 plot(Time(1:N), Vin(3,1:N),'-b+');
-title('Daily Simulation: Voltages on Input Terminal');
+title('Voltages on Input Terminal (Stateflow RegControl Emulation, All Phases)');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
@@ -870,7 +873,7 @@ plot(Time(1:N), Vout(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Vout(2,1:N),'-r+');
 plot(Time(1:N), Vout(3,1:N),'-b+');
-title('Daily Simulation: Voltages on Output Terminal');
+title('Voltages on Output Terminal (Stateflow RegControl Emulation, All Phases)');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
@@ -882,7 +885,7 @@ plot(Time(1:N), Cin(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Cin(2,1:N),'-r+');
 plot(Time(1:N), Cin(3,1:N),'-b+');
-title('Daily Simulation: Currents on Input Terminal');
+title('Currents on Input Terminal (Stateflow RegControl Emulation, All Phases)');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
@@ -893,7 +896,7 @@ plot(Time(1:N), Cout(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Cout(2,1:N),'-r+');
 plot(Time(1:N), Cout(3,1:N),'-b+');
-title('Daily Simulation: Currents on Output Terminal');
+title('Currents on Output Terminal (Stateflow RegControl Emulation, All Phases)');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
