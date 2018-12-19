@@ -59,14 +59,15 @@ xsfIncr = [TReg1.Winding(RCReg1.xsfWinding).TapIncrement;
 
 %% Data packaging for Simulink:
 
-% LastHandle = Simulink.Parameter;
-% LastHandle.DataType = 'double';
-
 TimeInSec = Simulink.Parameter;
 TimeInSec.DataType = 'double';
 
 LastQueue = Simulink.Parameter;
 LastQueue.DataType = 'double';
+
+LastHandle = Simulink.Parameter;
+LastHandle.DataType = 'uint8';
+LastHandle.Value = uint8(0);
 
 ControlledTransformerVoltages = Simulink.Parameter;
 ControlledTransformerVoltages.DataType = 'double';
@@ -562,10 +563,6 @@ Armed = Simulink.Parameter;
 Armed.DataType = 'boolean';
 Armed.Value = false(3,1);
 
-Handle = Simulink.Parameter;
-Handle.DataType = 'uint8';
-Handle.Value = zeros(3,1);
-
 RevHandle = Simulink.Parameter;
 RevHandle.DataType = 'uint8';
 RevHandle.Value = zeros(3,1);
@@ -623,7 +620,7 @@ StatesElems(5).SampleTime = -1;
 StatesElems(5).Complexity = 'real';
 
 StatesElems(6) = Simulink.BusElement;
-StatesElems(6).Name = 'Handle';
+StatesElems(6).Name = 'RevHandle';
 StatesElems(6).Dimensions = 1;
 StatesElems(6).DimensionsMode = 'Fixed';
 StatesElems(6).DataType = 'uint8';
@@ -631,7 +628,7 @@ StatesElems(6).SampleTime = -1;
 StatesElems(6).Complexity = 'real';
 
 StatesElems(7) = Simulink.BusElement;
-StatesElems(7).Name = 'RevHandle';
+StatesElems(7).Name = 'RevBackHandle';
 StatesElems(7).Dimensions = 1;
 StatesElems(7).DimensionsMode = 'Fixed';
 StatesElems(7).DataType = 'uint8';
@@ -639,20 +636,12 @@ StatesElems(7).SampleTime = -1;
 StatesElems(7).Complexity = 'real';
 
 StatesElems(8) = Simulink.BusElement;
-StatesElems(8).Name = 'RevBackHandle';
+StatesElems(8).Name = 'PresentTap';
 StatesElems(8).Dimensions = 1;
 StatesElems(8).DimensionsMode = 'Fixed';
-StatesElems(8).DataType = 'uint8';
+StatesElems(8).DataType = 'double';
 StatesElems(8).SampleTime = -1;
 StatesElems(8).Complexity = 'real';
-
-StatesElems(9) = Simulink.BusElement;
-StatesElems(9).Name = 'PresentTap';
-StatesElems(9).Dimensions = 1;
-StatesElems(9).DimensionsMode = 'Fixed';
-StatesElems(9).DataType = 'double';
-StatesElems(9).SampleTime = -1;
-StatesElems(9).Complexity = 'real';
 
 StatesBus = Simulink.Bus;
 StatesBus.Elements = StatesElems;
@@ -680,11 +669,11 @@ SecOutVals = TimeOutVals - 3600*HourOutVals;
 % signal logging:
 
 simOut = repmat(Simulink.SimulationOutput, N, 1);
-LastQueue.Value = zeros(1,5,50);
+LastQueue.Value = zeros(1,6,50);
 % LastHandle.Value = 1;
 
-QueueTimeLapse = zeros(1,5,50,N);
-ExecutedTimeLapse = zeros(1,5,N); % last executed item, updated on each iteration
+QueueTimeLapse = zeros(1,6,50,N);
+ExecutedTimeLapse = zeros(1,6,N); % last executed item, updated on each iteration
 HandleTimeLapse = zeros(N,1);
 
 tapPos = zeros(N, length(regNames));
@@ -693,6 +682,8 @@ CurrentsInOut = zeros(3,2,N);
 
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
+
+N = 2;
 
 for nn = 1:N
     tic;
@@ -755,14 +746,19 @@ for nn = 1:N
                 InReverseMode.Value(phase) = tempOut.InReverseMode.Data;
                 LookingForward.Value(phase) = tempOut.LookingForward.Data;
                 Armed.Value(phase) = tempOut.Armed.Data;       
-                Handle.Value(phase) = tempOut.Handle.Data;
+%                 Handle.Value(phase) = tempOut.Handle.Data;
                 RevHandle.Value(phase) = tempOut.RevHandle.Data;
                 RevBackHandle.Value(phase) = tempOut.RevBackHandle.Data;
 %                 PresentTap.Value(phase) = tempOut.PresentTap.Data;            
             end
+            
+            TempHandle = simOut(nn-1).currHandle.Data;
+            if TempHandle ~= 0
+                LastHandle.Value = TempHandle;
+            end
 
             CurrQueueSize = simOut(nn-1).QueueSize.Data;
-            TempLastQueue = zeros(1,5,50);
+            TempLastQueue = zeros(1,6,50);
             LastQueueToLog = [];
             if CurrQueueSize > 0
                 LastQueueToLog = ...
@@ -771,14 +767,14 @@ for nn = 1:N
             end
             LastQueue.Value = TempLastQueue;
 
-            HandleTimeLapse( nn-1 ) = Handle.Value;
+            HandleTimeLapse( nn-1 ) = LastHandle.Value;
             QueueTimeLapse( :,:,:,(nn-1) ) = LastQueue.Value;
             ExecutedTimeLapse( :,:,(nn-1) ) = ...
                 simOut(nn-1).FromQueue.signals.values(:,:,end); % based on latest addition to the Queue
         end
         
         % 4 - obtain control actions from Simulink:    
-        simOut(nn) = sim('regcontrol_1ph', 'TimeOut', 1000);
+        simOut(nn) = sim('regcontrol_model_3ph', 'TimeOut', 1000);
 
         TimeElapsed = toc;
 
@@ -803,22 +799,21 @@ for nn = 1:N
            a = 'Solution did not Converge';
         end
         disp(a)    
-
 %         DSSSolution.SampleControlDevices;
 %         DSSSolution.DoControlActions;
         
-        Logged = LogEvent_3ph( nn, HourOutVals(nn), SecOutVals(nn), ...
-            simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
-            simOut(nn).FromQueue.signals.values, TapChangesMade, ...
-            tapPos, regNames, TapIncrement.Value, CtrlIter);
-        
-        if CtrlIter == 0
-              EventLog(nn) = Logged;
-        else % if subsequent action does nothing, do not replace original:
-            if ~contains(Logged.Action, 'None')
-               EventLog(nn) = Logged;
-            end
-        end
+%         Logged = LogEvent_3ph( nn, HourOutVals(nn), SecOutVals(nn), ...
+%             simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
+%             simOut(nn).FromQueue.signals.values, TapChangesMade, ...
+%             tapPos, regNames, TapIncrement.Value, CtrlIter);
+%         
+%         if CtrlIter == 0
+%               EventLog(nn) = Logged;
+%         else % if subsequent action does nothing, do not replace original:
+%             if ~contains(Logged.Action, 'None')
+%                EventLog(nn) = Logged;
+%             end
+%         end
     
         fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
 
@@ -843,17 +838,15 @@ for nn = 1:N
     end
 end
 
-DSSText.Command = 'Show Eventlog';
-
 %% Plots 
 
 Time = TimeOutVals/3600; % converts cumulative seconds to hours
 
 figure(1);
-plot(Time, tapPos(:,1),'-k+');  % black *
+plot(Time(1:N), tapPos(1:N,1),'-k+');  % black *
 hold on
-plot(Time, tapPos(:,2),'-r+');
-plot(Time, tapPos(:,3),'-b+');
+plot(Time(1:N), tapPos(1:N,2),'-r+');
+plot(Time(1:N), tapPos(1:N,3),'-b+');
 title('Daily Simulation: Transformer Taps');
 ylabel('Tap Position');
 xlabel('Hour');

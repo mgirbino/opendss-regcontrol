@@ -704,6 +704,16 @@ for nn = 1:N
         DSSSolution.SolveNoControl;
         
         % 2 - Package DSS measurements for Simulink:
+        ctv = zeros(4,3);
+        for phase = 1:3
+            DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
+            xf_ckt = DSSCircuit.ActiveCktElement;
+            
+            ctv(:,phase) = MakeComplex(xf_ckt.Voltages); 
+            % [in ... | out ...]' (complex)
+        end 
+        
+        % 2 - Package DSS measurements for Simulink:
         DSSCircuit.SetActiveElement('Transformer.TReg1');
         xfm1 = DSSCircuit.ActiveCktElement;
 
