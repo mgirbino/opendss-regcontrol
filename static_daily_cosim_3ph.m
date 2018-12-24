@@ -646,6 +646,18 @@ StatesElems(8).Complexity = 'real';
 StatesBus = Simulink.Bus;
 StatesBus.Elements = StatesElems;
 
+% RegActivityElems(1) = Simulink.BusElement;
+% RegActivityElems(1).Name = 'SamplingMode';
+% RegActivityElems(1).DataType = 'Enum: SamplingModeType';
+% 
+% RegActivityElems(2) = Simulink.BusElement;
+% RegActivityElems(2).Name = 'ExecutionMode';
+% RegActivityElems(2).DataType = 'Enum: ExecutionModeType';
+% 
+% RegActivityBus = Simulink.Bus;
+% RegActivityBus.Elements = RegActivityElems;
+
+
 %% Snapshot approximating Daily Simulation:
 
 % Add loadshape:
@@ -683,12 +695,9 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 96;
+N = 12;
 
 for nn = 1:N
-    if nn == 8
-        nn;
-    end
     tic;
     
     DSSSolution.LoadMult = LoadNorm(nn); % new loadshape per iteration
