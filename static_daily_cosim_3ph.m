@@ -912,7 +912,7 @@ hold off
 
 %% Use logsout results to navigate digraph and update weights:
 
-% 1 - MakeTapChange Graph:
+% Build MakeTapChange Graph:
 MakeTCsource = {'', '', '.GetVboostFromVlimit', ...
     '.QuantizeTapChange', '.QuantizeTapChange', '.QuantizeTapChange', ...
     '.TapChangeUp', '.TapChangeUp', '.TapChangeUp.Finished', ...
@@ -926,65 +926,15 @@ MakeTCdest = {'.GetVboostFromVlimit', '.QuantizeTapChange', '.QuantizeTapChange'
     '.Finished', '.TapChangeDown.Finished'};
 
 MakeTCblockpath = 'Sampling.MakeTapChange';
-MakeTCsourceBP = strcat( MakeTCblockpath, MakeTCsource );
-MakeTCdestBP = strcat( MakeTCblockpath, MakeTCdest );
 
-MakeTCgraph = digraph(MakeTCsource, MakeTCdest);
-weights = zeros( length(MakeTCsource), 1 );
+MakeTCgraph = MakeStatesDigraph(MakeTCsource, MakeTCdest, MakeTCblockpath);
 
-MTCEdgeTable = MakeTCgraph.Edges;
-MTCNodeTable = MakeTCgraph.Nodes;
-
-MTCEdgeTable.Weight = weights;
-
-MakeTCgraph = digraph(MTCEdgeTable, MTCNodeTable);
-figure(4);
-plot(MakeTCgraph,'Layout','layered','EdgeLabel',MakeTCgraph.Edges.Weight)
-title(MakeTCblockpath);
-
-% 2 - The list:
-MakeTCstates = repmat(Stateflow.SimulationData.State, size(MTCNodeTable) );
-pp = table('Size', [height(MTCNodeTable) 2], 'VariableTypes', {'string', 'uint8'}, ...
-    'VariableNames', {'Name', 'Value'})
-searchFor = strcat(MakeTCblockpath, table2array(MTCNodeTable));
-
-for ii = 1:height(pp)
-    elem = loclogs.getElement(searchFor{ii});
-    pp(ii,1) = elem.Name;
-    pp(ii,2) = elem.Values.Data;
-end
-% 3 - Traverse graph:
-
-ancestor = MakeTCsourceBP{1};
-dest = MakeTCgraph.successors(ancestor); % destination nodes
-dest_len = length(dest); % number of destination nodes
-
-while ~isempty(dest)
-    % iterate through destination nodes to find the path taken:
-    for ii = 1:dest_len
-        if sum( ismember( L2OA, dest(ii) ) ) % if dest(ii) exists in the list            
-            % update weight:
-            edge_idx = G.findedge( ancestor, dest(ii) );
-            prevWeight = G.Edges.Weight(edge_idx);
-            G.Edges.Weight(edge_idx) = prevWeight + 1;
-            
-            % there should only be 1 successor that's true (would otherwise
-            % break depth-based traversal)
-            ancestor = dest(ii);
-            dest = G.successors( dest(ii) );
-            break
-        elseif ii == dest_len % false and it's the last successor
-            % there may be further successors, but this state is unentered
-            error('State Machine is exiting before reaching a stable state');
-        end
-    end
-end
+% Traverse MakeTapChange graph:
+MakeTCgraph = UpdateEdgeWeights( MakeTCgraph, MakeTCblockpath, ...
+    simOut(1).logsout, (1/N) );
 
 figure(4);
-plot(G,'Layout','force','EdgeLabel',G.Edges.Weight)
-
-
-
+plot(MakeTCgraph,'Layout','layered','EdgeLabel',MakeTCgraph.Edges.Weight);
 
 
 
