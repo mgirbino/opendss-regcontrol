@@ -646,16 +646,25 @@ StatesElems(8).Complexity = 'real';
 StatesBus = Simulink.Bus;
 StatesBus.Elements = StatesElems;
 
-% RegActivityElems(1) = Simulink.BusElement;
-% RegActivityElems(1).Name = 'SamplingMode';
-% RegActivityElems(1).DataType = 'Enum: SamplingModeType';
-% 
-% RegActivityElems(2) = Simulink.BusElement;
-% RegActivityElems(2).Name = 'ExecutionMode';
-% RegActivityElems(2).DataType = 'Enum: ExecutionModeType';
-% 
-% RegActivityBus = Simulink.Bus;
-% RegActivityBus.Elements = RegActivityElems;
+%% Build directed graphs representing state transition Markov chain:
+
+% MakeTapChange Graph:
+MakeTCsource = {'', '', '.GetVboostFromVlimit', ...
+    '.QuantizeTapChange', '.QuantizeTapChange', '.QuantizeTapChange', ...
+    '.TapChangeUp', '.TapChangeUp', '.TapChangeUp.Finished', ...
+    '.TapChangeUp.PushChange', '.TapChangeDown', '.TapChangeDown', ...
+    '.TapChangeDown.Finished', '.TapChangeDown.PushChange'};
+
+MakeTCdest = {'.GetVboostFromVlimit', '.QuantizeTapChange', '.QuantizeTapChange', ...
+    '.TapChangeUp', '.TapChangeDown', '.Finished', ...
+    '.TapChangeUp.PushChange', '.TapChangeUp.Finished', '.Finished', ...
+    '.TapChangeUp.Finished', '.TapChangeDown.PushChange', '.TapChangeDown.Finished', ...
+    '.Finished', '.TapChangeDown.Finished'};
+
+MakeTCblockpath = 'Sampling.MakeTapChange';
+
+MakeTCgraph = MakeStatesDigraph(MakeTCsource, MakeTCdest, MakeTCblockpath);
+MakeTCentries = 0;
 
 
 %% Snapshot approximating Daily Simulation:
@@ -695,7 +704,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 2;
+N = 96;
 
 for nn = 1:N
     tic;
@@ -788,8 +797,6 @@ for nn = 1:N
         % 4 - obtain control actions from Simulink:    
         simOut(nn) = sim('regcontrol_model_3ph', 'TimeOut', 1000);
 
-        TimeElapsed = toc;
-
         % 5 - execute tap changes in DSS:
         TapChangesMade = [simOut(nn).TapChangeToMake1.Data;
             simOut(nn).TapChangeToMake2.Data;
@@ -826,7 +833,7 @@ for nn = 1:N
 %                EventLog(nn) = Logged;
 %             end
 %         end
-    
+        TimeElapsed = toc;    
         fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
 
         if simOut(nn).ControlActionsDone.Data, break, end 
@@ -834,7 +841,13 @@ for nn = 1:N
         CtrlIter = CtrlIter + 1;
     end
     
-    % update all tap positions:    
+    % Update MakeTapChange graph:
+    [MakeTCgraph, MakeTCentry] = UpdateEdgeWeights( MakeTCgraph, ...
+        MakeTCblockpath, simOut(nn).logsout, 1 );
+    % increment frequency of entries:
+    MakeTCentries = MakeTCentries + MakeTCentry;
+    
+    % update plot data on all tap positions:    
     for phase = 1:3
         xf_trans.Name = xsfNames{phase};
         DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
@@ -910,31 +923,11 @@ ylabel('Voltage');
 xlabel('Hour');
 hold off
 
-%% Use logsout results to navigate digraph and update weights:
-
-% Build MakeTapChange Graph:
-MakeTCsource = {'', '', '.GetVboostFromVlimit', ...
-    '.QuantizeTapChange', '.QuantizeTapChange', '.QuantizeTapChange', ...
-    '.TapChangeUp', '.TapChangeUp', '.TapChangeUp.Finished', ...
-    '.TapChangeUp.PushChange', '.TapChangeDown', '.TapChangeDown', ...
-    '.TapChangeDown.Finished', '.TapChangeDown.PushChange'};
-
-MakeTCdest = {'.GetVboostFromVlimit', '.QuantizeTapChange', '.QuantizeTapChange', ...
-    '.Finished', '.TapChangeUp', '.TapChangeDown', ...
-    '.TapChangeUp.Finished', '.TapChangeUp.PushChange', '.Finished', ...
-    '.TapChangeUp.Finished', '.TapChangeDown.Finished', '.TapChangeDown.PushChange', ...
-    '.Finished', '.TapChangeDown.Finished'};
-
-MakeTCblockpath = 'Sampling.MakeTapChange';
-
-MakeTCgraph = MakeStatesDigraph(MakeTCsource, MakeTCdest, MakeTCblockpath);
-
-% Traverse MakeTapChange graph:
-MakeTCgraph = UpdateEdgeWeights( MakeTCgraph, MakeTCblockpath, ...
-    simOut(1).logsout, (1/N) );
-
+% normalize edge weight to number of state entries:
+MakeTCgraph.Edges.Weight = MakeTCgraph.Edges.Weight / MakeTCentries;
 figure(4);
 plot(MakeTCgraph,'Layout','layered','EdgeLabel',MakeTCgraph.Edges.Weight);
+title( compose( 'MakeTapChange Entered %f', (MakeTCentries/N) ) );
 
 
 

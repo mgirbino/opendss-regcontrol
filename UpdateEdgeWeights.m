@@ -1,4 +1,5 @@
-function states_dg = UpdateEdgeWeights(states_dg, startNode, logsout, increment)
+function [states_dg, entry] = UpdateEdgeWeights(states_dg, startNode, ...
+    logsout, increment)
 %UPDATEEDGEWEIGHTS Increments the edge weights connecting visited nodes
 %   Traverses states_dg, beginning at startNode. Adds increment to the
 %   weight of edges connecting visited nodes. Visitation is determined by
@@ -8,6 +9,7 @@ function states_dg = UpdateEdgeWeights(states_dg, startNode, logsout, increment)
     % 1 - Initialize statesList:
     statesList = table('Size', [height(states_dg.Nodes) 2], 'VariableTypes', ...
         {'string', 'uint8'}, 'VariableNames', {'Name', 'Value'});
+    entry = 1;
     
     % 2 - Parse logsout into statesList:
     searchFor = table2array(states_dg.Nodes);
@@ -44,7 +46,14 @@ function states_dg = UpdateEdgeWeights(states_dg, startNode, logsout, increment)
                 break
             elseif ii == dest_len % false and it's the last successor
                 % there may be further successors, but this state is unentered
-                error('State Machine is exiting before reaching a stable state');
+                
+                % when these are equal, whole graph has been bypassed:
+                if ancestor == startNode
+                    dest = string.empty; % breaks while loop
+                    entry = 0; % indicates never entered / bypassed
+                else                    
+                    error('State Machine is exiting before reaching a stable state');
+                end
             end
         end
     end
