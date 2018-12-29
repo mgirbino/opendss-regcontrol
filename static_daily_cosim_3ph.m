@@ -53,6 +53,7 @@ DSSText.command = TReg3.DSSCommand;
 
 xsfNames = {TReg1.getName; TReg2.getName; TReg3.getName};
 regNames = {RCReg1.getName; RCReg2.getName; RCReg3.getName};
+regWsNames = {'RegControl1'; 'RegControl2'; 'RegControl3'};
 xsfIncr = [TReg1.Winding(RCReg1.xsfWinding).TapIncrement;
     TReg2.Winding(RCReg2.xsfWinding).TapIncrement;
     TReg3.Winding(RCReg3.xsfWinding).TapIncrement];
@@ -663,9 +664,102 @@ MakeTCdest = {'.GetVboostFromVlimit', '.QuantizeTapChange', '.QuantizeTapChange'
 
 MakeTCblockpath = 'Sampling.MakeTapChange';
 
-MakeTCgraph = MakeStatesDigraph(MakeTCsource, MakeTCdest, MakeTCblockpath);
-MakeTCentries = 0;
+mtcg = MakeStatesDigraph(MakeTCsource, MakeTCdest, MakeTCblockpath);
+MakeTCgraph = struct;
 
+for phase = 1:3
+    MakeTCgraph = setfield(MakeTCgraph, regWsNames{phase}, mtcg);
+end
+
+MakeTCentry = zeros(3,1);
+MakeTCentries = zeros(3,1);
+
+% Execution Graph:
+ExecSource = {'.ParseAction', '.ParseAction', '.ParseAction', ...
+    '.MakingTapChange', '.MakingTapChange', '.Reversing', ...
+    '.Reversing', '.Reversing', '.MakingTapChange.NonzeroTapChange', ...
+    '.MakingTapChange.Finished', '.Reversing.FlipCogen', '.Reversing.FlipReverse', ...
+    '.Reversing.Finished'};
+
+ExecDest = {'.MakingTapChange', '.Reversing', '.Finished', ...
+    '.MakingTapChange.NonzeroTapChange', '.MakingTapChange.Finished', '.Reversing.FlipCogen', ...
+    '.Reversing.FlipReverse', '.Reversing.Finished', '.MakingTapChange.Finished', ...
+    '.Finished', '.Reversing.Finished', '.Reversing.Finished', ...
+    '.Finished'};
+
+ExecBlockpath = 'Execution';
+
+execg = MakeStatesDigraph(ExecSource, ExecDest, ExecBlockpath);
+ExecGraph = struct;
+
+for phase = 1:3
+    ExecGraph = setfield(ExecGraph, regWsNames{phase}, execg);
+end
+
+ExecEntry = zeros(3,1);
+ExecEntries = zeros(3,1);
+
+% LookingForwardMode Graph:
+LookingFwdSource = {'.DetermineReversePending', '.DetermineReversePending', ...
+    '.DetermineReversePending', '.DetermineReversePending.CorrectFalseReversePending', ...
+    '.DetermineReversePending.CorrectFalseReversePending', '.DetermineReversePending.CorrectTrueReversePending', ...
+    '.DetermineReversePending.CorrectTrueReversePending', '.DetermineReversePending.CorrectFalseReversePending.FlipToTrue', ...
+    '.DetermineReversePending.CorrectFalseReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending.FlipToFalse', '.DetermineReversePending.CorrectTrueReversePending.Finished'};
+
+LookingFwdDest = {'.DetermineReversePending.CorrectFalseReversePending', '.DetermineReversePending.CorrectTrueReversePending', ...
+    '.DetermineReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.FlipToTrue', ...
+    '.DetermineReversePending.CorrectFalseReversePending.Finished', '.DetermineReversePending.CorrectTrueReversePending.FlipToFalse', ...
+    '.DetermineReversePending.CorrectTrueReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending', '.DetermineReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending.Finished', '.DetermineReversePending.Finished'};
+
+LookingFwdBlockpath = 'Sampling.LookingForwardMode';
+
+lfwdg = MakeStatesDigraph(LookingFwdSource, LookingFwdDest, LookingFwdBlockpath);
+LookingFwdGraph = struct;
+
+for phase = 1:3
+    LookingFwdGraph = setfield(LookingFwdGraph, regWsNames{phase}, lfwdg);
+end
+
+LookingFwdEntry = zeros(3,1);
+LookingFwdEntries = zeros(3,1);
+
+% LookingReverseOrCogenMode Graph:
+LookingRevSource = {'.DetermineReversePending', '.DetermineReversePending', ...
+    '.DetermineReversePending', '.DetermineReversePending.CorrectFalseReversePending', ...
+    '.DetermineReversePending.CorrectFalseReversePending', '.DetermineReversePending.CorrectTrueReversePending', ...
+    '.DetermineReversePending.CorrectTrueReversePending', '.DetermineReversePending.CorrectFalseReversePending.FlipToTrue', ...
+    '.DetermineReversePending.CorrectFalseReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending.FlipToFalse', '.DetermineReversePending.CorrectTrueReversePending.Finished', ...
+    '.DetermineReversePending.Finished', '.DetermineReversePending.Finished', ...
+    '.ReverseNeutralCase', '.ReverseNeutralCase', ...
+    '.ReverseNeutralCase.QuantizeTapChange', '.ReverseNeutralCase.QuantizeTapChange', ...
+    '.ReverseNeutralCase.Finished', '.ReverseNeutralCase.MakeTapChange'};  
+
+LookingRevDest = {'.DetermineReversePending.CorrectFalseReversePending', '.DetermineReversePending.CorrectTrueReversePending', ...
+    '.DetermineReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.FlipToTrue', ...
+    '.DetermineReversePending.CorrectFalseReversePending.Finished', '.DetermineReversePending.CorrectTrueReversePending.FlipToFalse', ...
+    '.DetermineReversePending.CorrectTrueReversePending.Finished', '.DetermineReversePending.CorrectFalseReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending', '.DetermineReversePending.Finished', ...
+    '.DetermineReversePending.CorrectTrueReversePending.Finished', '.DetermineReversePending.Finished', ...
+    '.ReverseNeutralCase', '.Finished', ...
+    '.ReverseNeutralCase.QuantizeTapChange', '.ReverseNeutralCase.Finished', ...
+    '.ReverseNeutralCase.MakeTapChange', '.ReverseNeutralCase.Exiting', ...
+    '.Finished', '.ReverseNeutralCase.Exiting'};
+
+LookingRevBlockpath = 'Sampling.LookingReverseOrCogenMode';
+
+lrevg = MakeStatesDigraph(LookingRevSource, LookingRevDest, LookingRevBlockpath);
+LookingRevGraph = struct;
+
+for phase = 1:3
+    LookingRevGraph = setfield(LookingRevGraph, regWsNames{phase}, lrevg);
+end
+
+LookingRevEntry = zeros(3,1);
+LookingRevEntries = zeros(3,1);
 
 %% Snapshot approximating Daily Simulation:
 
@@ -704,7 +798,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 96;
+N = 12;
 
 for nn = 1:N
     tic;
@@ -841,14 +935,10 @@ for nn = 1:N
         CtrlIter = CtrlIter + 1;
     end
     
-    % Update MakeTapChange graph:
-    [MakeTCgraph, MakeTCentry] = UpdateEdgeWeights( MakeTCgraph, ...
-        MakeTCblockpath, simOut(nn).logsout, 1 );
-    % increment frequency of entries:
-    MakeTCentries = MakeTCentries + MakeTCentry;
     
-    % update plot data on all tap positions:    
+        
     for phase = 1:3
+        % update plot data on all tap positions:
         xf_trans.Name = xsfNames{phase};
         DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
         xf_ckt = DSSCircuit.ActiveCktElement;
@@ -860,6 +950,36 @@ for nn = 1:N
         VoltagesInOut(phase,2,nn) = tempVolts(3);
         CurrentsInOut(phase,1,nn) = tempCurr(1);
         CurrentsInOut(phase,2,nn) = tempCurr(3);
+        
+        % Update graphs:
+        loclog = find(simOut(nn).logsout, '-regexp', 'BlockPath', ...
+            sprintf('\\w*%s\\w*', regWsNames{phase}));
+
+        temp_g = getfield(MakeTCgraph, regWsNames{phase});
+        [temp_g, MakeTCentry(phase)] = UpdateEdgeWeights( temp_g, ...
+            temp_g.Nodes.Name{1}, loclog, 1 );
+        setfield(MakeTCgraph, regWsNames{phase}, temp_g);
+        
+        temp_g = getfield(ExecGraph, regWsNames{phase});
+        [temp_g, ExecEntry(phase)] = UpdateEdgeWeights( temp_g, ...
+            temp_g.Nodes.Name{1}, loclog, 1 );
+        setfield(ExecGraph, regWsNames{phase}, temp_g);
+        
+        temp_g = getfield(LookingFwdGraph, regWsNames{phase});
+        [temp_g, LookingFwdEntry(phase)] = UpdateEdgeWeights( temp_g, ...
+            temp_g.Nodes.Name{1}, loclog, 1 );
+        setfield(LookingFwdGraph, regWsNames{phase}, temp_g);
+        
+        temp_g = getfield(LookingRevGraph, regWsNames{phase});
+        [temp_g, LookingRevEntry(phase)] = UpdateEdgeWeights( temp_g, ...
+            temp_g.Nodes.Name{1}, loclog, 1 );
+        setfield(LookingRevGraph, regWsNames{phase}, temp_g);
+
+        % increment frequency of entries:
+        MakeTCentries(phase)       =   MakeTCentries(phase) + MakeTCentry(phase);
+        ExecEntries(phase)         =   ExecEntries(phase) + ExecEntry(phase);
+        LookingFwdEntries(phase)   =   LookingFwdEntries(phase) + LookingFwdEntry(phase);
+        LookingRevEntries(phase)   =   LookingRevEntries(phase) + LookingRevEntry(phase);
     end
 end
 
@@ -923,11 +1043,22 @@ ylabel('Voltage');
 xlabel('Hour');
 hold off
 
-% normalize edge weight to number of state entries:
-MakeTCgraph.Edges.Weight = MakeTCgraph.Edges.Weight / MakeTCentries;
-figure(4);
-plot(MakeTCgraph,'Layout','layered','EdgeLabel',MakeTCgraph.Edges.Weight);
-title( compose( 'MakeTapChange Entered %f', (MakeTCentries/N) ) );
+for phase = 1:3
+    figure(4);
+    subplot(1,3,phase);
+    PlotNormalized(getfield(MakeTCgraph, regWsNames{phase}), MakeTCblockpath, MakeTCentries(phase), N);
 
+    figure(5);
+    subplot(1,3,phase);
+    PlotNormalized(getfield(ExecGraph, regWsNames{phase}), ExecBlockpath, ExecEntries(phase), N);
+
+    figure(6);
+    subplot(1,3,phase);
+    PlotNormalized(getfield(LookingFwdGraph, regWsNames{phase}), LookingFwdBlockpath, LookingFwdEntries(phase), N);
+
+    figure(7);
+    subplot(1,3,phase);
+    PlotNormalized(getfield(LookingRevGraph, regWsNames{phase}), LookingRevBlockpath, LookingRevEntries(phase), N);
+end
 
 
