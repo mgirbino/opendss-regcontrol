@@ -820,7 +820,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 12;
+N = 36;
 
 for nn = 1:N
     tic;
@@ -1092,3 +1092,4 @@ end
 figure(8);
 PlotNormalized(QHexecGraph, QHexecBlockpath, QHexecEntries, N);
 
+struct2table(EventLog)

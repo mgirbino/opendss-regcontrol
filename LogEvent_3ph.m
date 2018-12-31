@@ -1,4 +1,4 @@
-function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
+function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue2D, OriginalQueue, ...
     AfterExec, TapChangesToMake, Positions, regNames, TapIncrements, ControlIter)
 %LOGEVENT_3PH Logs events into readable format
 %   Compares the control queue before and after executing control actions
@@ -13,48 +13,59 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
     LogItem.Sec = Sec;
     LogItem.ControlIter = ControlIter; % might change
     
-    % idea is to easily adapt to 3-phase mode:
-%     regNames = {regName};
-    allphases = 3;
-%     TapIncrements = TapIncrement;
+    allphases = length(regNames);        
     
     % before anything else, need to combine ItemToQueue and OriginalQueue:
-    if ~isnan(ItemToQueue(1))
+    if ~isnan(ItemToQueue2D(1))
+        ItemToQueue3D = Make3D(ItemToQueue2D);
         % CASE 1: ItemToQueue exists and OriginalQueue does not
-        if isempty(OriginalQueue) || isequal( OriginalQueue, zeros(1,6) )
-            OriginalQueue = ItemToQueue;
+        if isempty_orzero(OriginalQueue)
+            OriginalQueue = ItemToQueue3D;
         % CASE 2: Both ItemToQueue and OriginalQueue exist, and
         % OriginalQueue might contain ItemToQueue:
         elseif OriginalQueue(1,NewCtrlQueueFields.Handle,1) < ...
-                ItemToQueue(NewCtrlQueueFields.Handle)
-            sizeO = size(OriginalQueue);
-            sizeI = size(ItemToQueue);
-            if sizeI(1) > sizeO(1)
-                tempQ = zeros(sizeI);
-                tempQ(1:sizeO(1), 1:sizeO(2)) = OriginalQueue;
-                OriginalQueue = tempQ;
-            elseif sizeO(1) > sizeI(1)
-                tempQ = zeros(sizeO);
-                tempQ(1:sizeI(1), 1:sizeI(2)) = ItemToQueue;
-                ItemToQueue = tempQ;
-            end
-            OriginalQueue = cat(3, ItemToQueue, OriginalQueue);
+                ItemToQueue3D(NewCtrlQueueFields.Handle)
+%             sizeO = size(OriginalQueue);
+%             sizeI = size(ItemToQueue);
+%             if sizeI(1) > sizeO(1)
+%                 tempQ = zeros(sizeI);
+%                 tempQ(1:sizeO(1), 1:sizeO(2)) = OriginalQueue;
+%                 OriginalQueue = tempQ;
+%             elseif sizeO(1) > sizeI(1)
+%                 tempQ = zeros(sizeO);
+%                 tempQ(1:sizeI(1), 1:sizeI(2)) = ItemToQueue;
+%                 ItemToQueue = tempQ;
+%             end
+            OriginalQueue = cat(3, ItemToQueue3D, OriginalQueue);
         end
     end
+    
+    OriginalQueue = trimQueue(OriginalQueue);
     
     % CASE 1: Nothing in OriginalQueue (nothing executed) --> log nothing
     % CASE 1a: OriginalQueue matches AfterExec or AfterExec only adds to
     % OriginalQueue (nothing executed either way) --> also log nothing
-    if isempty(OriginalQueue) || ...
-            ~isempty(AfterExec) && ...
-            AfterExec(1,NewCtrlQueueFields.Handle,end) == ...
-            OriginalQueue(1,NewCtrlQueueFields.Handle,end)
+    if isempty_orzero(OriginalQueue) || isempty_orzero(AfterExec)
         for phase = 1:allphases
             LogItem.Action{phase} = 'None';
             LogItem.TapChange{phase} = 0;
-            LogItem.Position{phase} = Positions(idx,phase);
+            if idx > 1
+                LogItem.Position{phase} = Positions((idx-1),phase);
+            else
+                LogItem.Position{phase} = 1;
+            end
             LogItem.Device{phase} = regNames{phase};
-        end            
+        end          
+%     elseif isempty_orzero(OriginalQueue) || ...
+%             ~isempty(AfterExec) && ...
+%             AfterExec(1,NewCtrlQueueFields.Handle,end) == ...
+%             OriginalQueue(1,NewCtrlQueueFields.Handle,end)
+%         for phase = 1:allphases
+%             LogItem.Action{phase} = 'None';
+%             LogItem.TapChange{phase} = 0;
+%             LogItem.Position{phase} = Positions(idx,phase);
+%             LogItem.Device{phase} = regNames{phase};
+%         end            
     % CASES 2-4: Something executed because OriginalQueue is nonempty
     % and it does not match AfterExec --> put those actions into RecentExecuted
     else
@@ -70,10 +81,14 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
         elseif AfterExec(1,NewCtrlQueueFields.Handle,end) > ...
                 OriginalQueue(1,NewCtrlQueueFields.Handle,1)
             RecentExecuted = OriginalQueue;
+            
+        elseif AfterExec(1,NewCtrlQueueFields.Handle,end) == ...
+                OriginalQueue(1,NewCtrlQueueFields.Handle,end)
+            RecentExecuted = OriginalQueue;
         % CASE 4: part of or all of OriginalQueue is inside AfterExec
         % --> get the array index of the first item in OriginalQueue that
         % is not in AfterExec
-        else % AfterExec{...}(end) <= OriginalQueue{...}(1) / overlap exists
+        else % AfterExec{...}(end) < OriginalQueue{...}(1) / overlap exists
             for startIdx = 1:size(OriginalQueue,3)
                 if OriginalQueue(1,NewCtrlQueueFields.Handle,startIdx) < ...
                         AfterExec(1,NewCtrlQueueFields.Handle,end)
@@ -82,30 +97,12 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
             end
             
             RecentExecuted = OriginalQueue(:,:,startIdx:end);
-%             for field = 1:6
-%                 RecentExecuted{field} = OriginalQueue{field}(startIdx:end);
-%             end
         end
-        
-%         floatError = 0.02; % accounts for error in floating-point math
-% 
-%         % make sure times are consistent with simulation:        
-%         CheckTime(Sec, RecentExecuted{NewCtrlQueueFields.Sec}(1), floatError);
-%         %CheckTime(Hour, RecentExecuted{NewCtrlQueueFields.Hour}(1), floatError);
         
         usedPhases = false(allphases, 1); % keeps track of devices used in events
         
         iter = size(RecentExecuted,3);
         for jj = 1:iter
-%             Device = RecentExecuted(1,NewCtrlQueueFields.Device,jj);
-%             % get the phase/device and mark as used:
-%             for phase = 1:allphases
-%                 if startsWith(Device{jj}, regNames{phase}, 'IgnoreCase', true)
-%                     LogItem.Device{jj} = regNames{phase};
-%                     usedPhases(phase) = true;
-%                     break;
-%                 end
-%             end
             for phase = 1:allphases
             	if endsWith( regNames{phase}, ...
                         string( RecentExecuted(1,NewCtrlQueueFields.Device,jj) ) )
@@ -144,7 +141,11 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
             end
             
             % Position:
-            LogItem.Position{jj} = Positions(idx,phase);    
+            if idx > 1
+                LogItem.Position{jj} = Positions((idx-1),phase) + TapChangesToMake(phase);
+            else
+                LogItem.Position{jj} = 1 + TapChangesToMake(phase);
+            end
         end
         
         % log nothing for any phases remaining with no actions:
@@ -153,21 +154,37 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
             if ~usedPhases(phase)
                 LogItem.Action{iter+jj} = 'None';
                 LogItem.TapChange{iter+jj} = 0;
-                LogItem.Position{iter+jj} = Positions(idx,phase);
+                if idx > 1
+                    LogItem.Position{iter+jj} = Positions((idx-1),phase);
+                else
+                    LogItem.Position{iter+jj} = 1;
+                end
                 LogItem.Device{iter+jj} = regNames{phase};
                 jj = jj + 1;
             end
         end
     end
     
-%     function CheckTime(t1, t2, erramt)
-%         tChk = abs(t2 - t1)/t1;
-%         if isnan(tChk) || isinf(tChk) % NaN if zero/zero, Inf if nonzero/zero
-%             if ~(t1 < 100 && t2 < 100) % not same order
-%                 error('The executed items do not match the current time');
-%             end
-%         elseif tChk > erramt
-%             error('The executed items do not match the current time');
-%         end
-%     end
+    function mat_3d = Make3D(mat_2d)
+        % outputs a 1x6x3 matrix from a 3x6x1 matrix        
+        mat_3d = zeros(1,6,3);
+        for ii = 1:3
+            mat_3d(:,:,ii) = mat_2d(ii,:);
+        end
+    end
+
+    function iez = isempty_orzero(mat_3d)
+        iez = isempty(mat_3d) || isequal(mat_3d, zeros(size(mat_3d)));
+    end
+
+    function tq = trimQueue(mat_3d)
+        tq = mat_3d;
+        
+        for endIdx = 1:size(mat_3d,3)
+            if isequal(mat_3d(:,:,endIdx), zeros(1,6))
+                tq = mat_3d( :,:,1:max((endIdx-1),1) );
+                break
+            end
+        end
+    end
 end
