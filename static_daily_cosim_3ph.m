@@ -798,7 +798,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 12;
+N = 2;
 
 for nn = 1:N
     tic;
@@ -958,22 +958,22 @@ for nn = 1:N
         temp_g = getfield(MakeTCgraph, regWsNames{phase});
         [temp_g, MakeTCentry(phase)] = UpdateEdgeWeights( temp_g, ...
             temp_g.Nodes.Name{1}, loclog, 1 );
-        setfield(MakeTCgraph, regWsNames{phase}, temp_g);
+        MakeTCgraph = setfield(MakeTCgraph, regWsNames{phase}, temp_g);
         
         temp_g = getfield(ExecGraph, regWsNames{phase});
         [temp_g, ExecEntry(phase)] = UpdateEdgeWeights( temp_g, ...
             temp_g.Nodes.Name{1}, loclog, 1 );
-        setfield(ExecGraph, regWsNames{phase}, temp_g);
+        ExecGraph = setfield(ExecGraph, regWsNames{phase}, temp_g);
         
         temp_g = getfield(LookingFwdGraph, regWsNames{phase});
         [temp_g, LookingFwdEntry(phase)] = UpdateEdgeWeights( temp_g, ...
             temp_g.Nodes.Name{1}, loclog, 1 );
-        setfield(LookingFwdGraph, regWsNames{phase}, temp_g);
+        LookingFwdGraph = setfield(LookingFwdGraph, regWsNames{phase}, temp_g);
         
         temp_g = getfield(LookingRevGraph, regWsNames{phase});
         [temp_g, LookingRevEntry(phase)] = UpdateEdgeWeights( temp_g, ...
             temp_g.Nodes.Name{1}, loclog, 1 );
-        setfield(LookingRevGraph, regWsNames{phase}, temp_g);
+        LookingRevGraph = setfield(LookingRevGraph, regWsNames{phase}, temp_g);
 
         % increment frequency of entries:
         MakeTCentries(phase)       =   MakeTCentries(phase) + MakeTCentry(phase);
