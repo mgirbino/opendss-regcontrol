@@ -761,6 +761,28 @@ end
 LookingRevEntry = zeros(3,1);
 LookingRevEntries = zeros(3,1);
 
+% Queue Handler Executive Graph:
+QHexecSource = {'Asleep', 'Asleep', 'Asleep', ...
+    'DoNearestActions', 'DoNearestActions', 'DeletingByHandle', ...
+    'Pushing', 'DoNearestActions.WaitOnPeek', 'DoNearestActions.WaitOnPeek', ...
+    'DoNearestActions.ErrorNoItems', 'ReadyAgain', 'DoNearestActions.WaitOnPop', ...
+    'DoNearestActions.WaitOnPop', 'DoNearestActions.WaitOnPop', 'DoNearestActions.Finished', ...
+    'DoNearestActions.SendAction', 'DoNearestActions.SendAction'};
+
+QHexecDest = {'DoNearestActions', 'Pushing', 'DeletingByHandle', ...
+    'DoNearestActions.WaitOnPeek', 'DoNearestActions.ErrorNoItems', 'ReadyAgain', ...
+    'ReadyAgain', 'DoNearestActions.WaitOnPop', 'DoNearestActions.Finished', ...
+    'DoNearestActions.Finished', 'Asleep', 'DoNearestActions.SendAction', ...
+    'DoNearestActions.WaitOnPop', 'DoNearestActions.Finished', 'ReadyAgain', ...
+    'DoNearestActions.WaitOnPop', 'DoNearestActions.Finished'};
+
+QHexecBlockpath = 'Executive.';
+
+QHexecGraph = MakeStatesDigraph(QHexecSource, QHexecDest, QHexecBlockpath);
+
+QHexecEntry = 0;
+QHexecEntries = 0;
+
 %% Snapshot approximating Daily Simulation:
 
 % Add loadshape:
@@ -798,7 +820,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 2;
+N = 12;
 
 for nn = 1:N
     tic;
@@ -912,21 +934,20 @@ for nn = 1:N
            a = 'Solution did not Converge';
         end
         disp(a)    
-%         DSSSolution.SampleControlDevices;
-%         DSSSolution.DoControlActions;
         
-%         Logged = LogEvent_3ph( nn, HourOutVals(nn), SecOutVals(nn), ...
-%             simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
-%             simOut(nn).FromQueue.signals.values, TapChangesMade, ...
-%             tapPos, regNames, TapIncrement.Value, CtrlIter);
-%         
-%         if CtrlIter == 0
-%               EventLog(nn) = Logged;
-%         else % if subsequent action does nothing, do not replace original:
-%             if ~contains(Logged.Action, 'None')
-%                EventLog(nn) = Logged;
-%             end
-%         end
+        Logged = LogEvent_3ph( nn, HourOutVals(nn), SecOutVals(nn), ...
+            simOut(nn).ToQueue.signals.values, LastQueueToLog, ...
+            simOut(nn).FromQueue.signals.values, TapChangesMade, ...
+            tapPos, regNames, repmat(TapIncrement.Value, 3, 1), CtrlIter);
+        
+        if CtrlIter == 0
+              EventLog(nn) = Logged;
+        else % if subsequent action does nothing, do not replace original:
+            if ~contains(Logged.Action, 'None')
+               EventLog(nn) = Logged;
+            end
+        end
+        
         TimeElapsed = toc;    
         fprintf('Iteration %d, Time = %g\n', nn, TimeElapsed);
 
@@ -935,7 +956,14 @@ for nn = 1:N
         CtrlIter = CtrlIter + 1;
     end
     
-    
+    % Update QueueHandler Executive graph:
+    loclog = find(simOut(nn).logsout, '-regexp', 'BlockPath', ...
+            sprintf('\\w*%s\\w*', 'Queue Handler'));
+        
+    [QHexecGraph, QHexecEntry] = UpdateEdgeWeightsMult( QHexecGraph, ...
+            QHexecGraph.Nodes.Name{1}, loclog, 1 );
+        
+    QHexecEntries = QHexecEntries + QHexecEntry;
         
     for phase = 1:3
         % update plot data on all tap positions:
@@ -1061,4 +1089,6 @@ for phase = 1:3
     PlotNormalized(getfield(LookingRevGraph, regWsNames{phase}), LookingRevBlockpath, LookingRevEntries(phase), N);
 end
 
+figure(8);
+PlotNormalized(QHexecGraph, QHexecBlockpath, QHexecEntries, N);
 

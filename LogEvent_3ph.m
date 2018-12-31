@@ -4,11 +4,10 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
 %   Compares the control queue before and after executing control actions
 %   to determine which events occurred and must be logged (OriginalQueue
 %   and AfterExec)
-%   Main differences between this and LogEvent_dss: (1) operates on a
-%   single phase, so does not require list of regs, (2) combines
+%   Main differences between this and LogEvent_dss: (1) combines
 %   ItemToQueue and OriginalQueue (which is from the last iteration) to
-%   form how the Queue appeared before AfterExec, (3) operates on matrix
-%   representation of the queue, not structm, (4) fields are numbered
+%   form how the Queue appeared before AfterExec, (2) operates on matrix
+%   representation of the queue, not struct, (3) fields are numbered
 %   differently and are enumerated in NewCtrlQueueFields
     LogItem.Hour = Hour;
     LogItem.Sec = Sec;
@@ -22,12 +21,23 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
     % before anything else, need to combine ItemToQueue and OriginalQueue:
     if ~isnan(ItemToQueue(1))
         % CASE 1: ItemToQueue exists and OriginalQueue does not
-        if isempty(OriginalQueue)
+        if isempty(OriginalQueue) || isequal( OriginalQueue, zeros(1,6) )
             OriginalQueue = ItemToQueue;
         % CASE 2: Both ItemToQueue and OriginalQueue exist, and
         % OriginalQueue might contain ItemToQueue:
         elseif OriginalQueue(1,NewCtrlQueueFields.Handle,1) < ...
                 ItemToQueue(NewCtrlQueueFields.Handle)
+            sizeO = size(OriginalQueue);
+            sizeI = size(ItemToQueue);
+            if sizeI(1) > sizeO(1)
+                tempQ = zeros(sizeI);
+                tempQ(1:sizeO(1), 1:sizeO(2)) = OriginalQueue;
+                OriginalQueue = tempQ;
+            elseif sizeO(1) > sizeI(1)
+                tempQ = zeros(sizeO);
+                tempQ(1:sizeI(1), 1:sizeI(2)) = ItemToQueue;
+                ItemToQueue = tempQ;
+            end
             OriginalQueue = cat(3, ItemToQueue, OriginalQueue);
         end
     end
@@ -97,8 +107,10 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue, OriginalQueue, ...
 %                 end
 %             end
             for phase = 1:allphases
-            	if startsWith( RecentExecuted(1,NewCtrlQueueFields.Device,jj), ...
-                        regNames{phase}, 'IgnoreCase', true ), break, end
+            	if endsWith( regNames{phase}, ...
+                        string( RecentExecuted(1,NewCtrlQueueFields.Device,jj) ) )
+                    break
+                end
             end
                     
             LogItem.Device{jj} = regNames{phase};
