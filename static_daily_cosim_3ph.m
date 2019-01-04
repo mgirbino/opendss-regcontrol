@@ -820,7 +820,7 @@ CurrentsInOut = zeros(3,2,N);
 EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
     'Position', {}, 'TapChange', {}, 'Device', {});
 
-N = 36;
+N = 96;
 
 for nn = 1:N
     tic;
@@ -1074,19 +1074,27 @@ hold off
 for phase = 1:3
     figure(4);
     subplot(1,3,phase);
-    PlotNormalized(getfield(MakeTCgraph, regWsNames{phase}), MakeTCblockpath, MakeTCentries(phase), N);
+    
+    mtcg = MakeDigraphProb( getfield(MakeTCgraph, regWsNames{phase}) );
+    PlotNormalized(mtcg, MakeTCblockpath, MakeTCentries(phase), N);
 
     figure(5);
     subplot(1,3,phase);
-    PlotNormalized(getfield(ExecGraph, regWsNames{phase}), ExecBlockpath, ExecEntries(phase), N);
+    
+    execg = MakeDigraphProb( getfield(ExecGraph, regWsNames{phase}) );
+    PlotNormalized(execg, ExecBlockpath, ExecEntries(phase), N);
 
     figure(6);
     subplot(1,3,phase);
-    PlotNormalized(getfield(LookingFwdGraph, regWsNames{phase}), LookingFwdBlockpath, LookingFwdEntries(phase), N);
-
+    
+    lfwdg = MakeDigraphProb( getfield(LookingFwdGraph, regWsNames{phase}) );
+    PlotNormalized(lfwdg, LookingFwdBlockpath, LookingFwdEntries(phase), N);
+          
     figure(7);
     subplot(1,3,phase);
-    PlotNormalized(getfield(LookingRevGraph, regWsNames{phase}), LookingRevBlockpath, LookingRevEntries(phase), N);
+    
+    lrevg = MakeDigraphProb( getfield(LookingRevGraph, regWsNames{phase}) );
+    PlotNormalized(lrevg, LookingRevBlockpath, LookingRevEntries(phase), N);
 end
 
 figure(8);
