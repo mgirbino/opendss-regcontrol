@@ -1,15 +1,16 @@
-function [states_dg, entry] = UpdateEdgeWeights(states_dg, startNode, ...
-    logsout, increment)
-%UPDATEEDGEWEIGHTS Increments the edge weights connecting visited nodes
-%   Traverses states_dg, beginning at startNode. Adds increment to the
-%   weight of edges connecting visited nodes. Visitation is determined by
-%   whether the nodes occur as a Name in logsout, with a Value of 1 (or any
-%   array containing a 1 element).
+function poseq = ProbOfSequence(states_dg, perc_entries, logsout)
+%PROBOFSEQUENCE Gives the probability of a sequence of events from logsout
+% traverses states_dg, in the same way as UpdateEdgeWeights (referring to
+% logsout for nodes), and multiplies edge weights along the way to get the
+% probabilty of a sequence of events
+    
+    poseq = perc_entries;
+    
+    startNode = states_dg.Nodes.Name{1};
 
     % 1 - Initialize statesList:
     statesList = table('Size', [height(states_dg.Nodes) 2], 'VariableTypes', ...
         {'string', 'uint8'}, 'VariableNames', {'Name', 'Value'});
-    entry = 1;
     
     % 2 - Parse logsout into statesList:
     searchFor = table2array(states_dg.Nodes);
@@ -34,10 +35,7 @@ function [states_dg, entry] = UpdateEdgeWeights(states_dg, startNode, ...
         dest_len = length(dest); % number of destination nodes
         for ii = 1:dest_len
             if sum( strcmp( VisitedStates.Name, dest(ii) ) )       
-                % increment edge weight:
-                edge_idx = states_dg.findedge( ancestor, dest(ii) );
-                prevWeight = states_dg.Edges.Weight(edge_idx);
-                states_dg.Edges.Weight(edge_idx) = prevWeight + increment;
+                poseq = poseq * states_dg.Edges.Weight(edge_idx);
 
                 % there should only be 1 successor that's true (would otherwise
                 % break depth-based traversal)
@@ -50,7 +48,6 @@ function [states_dg, entry] = UpdateEdgeWeights(states_dg, startNode, ...
                 % when these are equal, whole graph has been bypassed:
                 if strcmp(ancestor, startNode)
                     dest = string.empty; % breaks while loop
-                    entry = 0; % indicates never entered / bypassed
                 else                    
                     error('State Machine is exiting before reaching a stable state');
                 end

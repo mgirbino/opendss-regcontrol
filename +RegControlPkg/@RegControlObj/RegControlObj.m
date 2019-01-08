@@ -115,7 +115,7 @@ classdef RegControlObj < Simulink.Parameter
         function obj = RegControlObj(varargin)
             p = inputParser;
             numchk = {'numeric'};
-            boolchk = {'boolean'};
+            boolchk = {'logical'};
             strchk = {'string'};
             xsfrmrchk = {'RegControlPkg.TransformerObj', 'TransformerObj'};
             
@@ -131,7 +131,7 @@ classdef RegControlObj < Simulink.Parameter
             
             addOptional(p,'RevBandwidth',3.0,@(x)validateattributes(x,numchk,nempty));
             addOptional(p,'RevDelay',60,@(x)validateattributes(x,numchk,nempty));
-            addOptional(p,'RevPowerThreshold',100e3,@(x)validateattributes(x,numchk,nempty));
+            addOptional(p,'RevPowerThreshold',100,@(x)validateattributes(x,numchk,nempty));
             addOptional(p,'RevVreg',120,@(x)validateattributes(x,numchk,nempty));
             addOptional(p,'Vreg',120,@(x)validateattributes(x,numchk,nempty));
 

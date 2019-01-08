@@ -100,18 +100,29 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue2D, OriginalQueue, ..
         end
         
         usedPhases = false(allphases, 1); % keeps track of devices used in events
+        lastjj = zeros(allphases, 1);
         
         iter = size(RecentExecuted,3);
         for jj = 1:iter
+            use_lastjj = false;
             for phase = 1:allphases
             	if endsWith( regNames{phase}, ...
                         string( RecentExecuted(1,NewCtrlQueueFields.Device,jj) ) )
                     break
                 end
             end
-                    
+            
+            % if phase has previously been used, might need to refer to
+            % previous tap position; condition signified by use_lastjj flag:
+            if usedPhases(phase)
+                use_lastjj = true;
+            else
+                lastjj(phase) = jj;
+            end
+            
             LogItem.Device{jj} = regNames{phase};
             usedPhases(phase) = true;
+
             % Action:
             switch( uint8(RecentExecuted(1,NewCtrlQueueFields.ActionCode,jj)) )
                 case ActionCodes.ACTION_TAPCHANGE
@@ -142,7 +153,11 @@ function LogItem = LogEvent_3ph(idx, Hour, Sec, ItemToQueue2D, OriginalQueue, ..
             
             % Position:
             if idx > 1
-                LogItem.Position{jj} = Positions((idx-1),phase) + TapChangesToMake(phase);
+                if ~use_lastjj
+                    LogItem.Position{jj} = Positions((idx-1),phase) + TapChangesToMake(phase);
+                else
+                    LogItem.Position{jj} = LogItem.Position{lastjj(phase)} + TapChangesToMake(phase);
+                end
             else
                 LogItem.Position{jj} = 1 + TapChangesToMake(phase);
             end
