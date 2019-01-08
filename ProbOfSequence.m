@@ -49,6 +49,7 @@ function po_seq = ProbOfSequence(states_dg, perc_entries, logsout)
                 % when these are equal, whole graph has been bypassed:
                 if strcmp(ancestor, startNode)
                     dest = string.empty; % breaks while loop
+                    po_seq = 1 - perc_entries;
                 else                    
                     error('State Machine is exiting before reaching a stable state');
                 end

@@ -1,4 +1,4 @@
-function PlotNormalized(states_dg, blockpath, entries, n_iter)
+function PlotNormalized(states_dg, blockpath, entries, n_iter, startNode, endNode)
 %PLOTNORMALIZED Plots a digraph, with normalized number of entries and
 %simplified name
 %   Takes a digraph of state transitions, removes their blockpath from the
@@ -6,11 +6,26 @@ function PlotNormalized(states_dg, blockpath, entries, n_iter)
 %   of entries into the starting node, and prints the number of entries
 %   into the starting node, normalized by the number of iterations
     states_dg.Nodes.Name = erase(states_dg.Nodes.Name, blockpath);
+    
+    before = 'Before';
+    after = 'After';
+    % parts_dg is constructed so its nodes and edges can be added to
+    % states_dg:    
+    parts_source = {before, before, endNode};
+    parts_dest = {startNode, after, after};    
+    parts_dg = digraph(parts_source, parts_dest);
+    parts_dg.Edges.Weight = [entries/n_iter; (1 - entries/n_iter); 1];
+    
+    states_dg = addnode(states_dg, {before after});
+    states_dg = addedge(states_dg, parts_dg.Edges);
+    
+    
     % entries == 0 --> weight = NaN
 %     if entries ~= 0
 %         states_dg.Edges.Weight = states_dg.Edges.Weight / entries;
 %     end
     plot(states_dg,'Layout','layered','EdgeLabel',states_dg.Edges.Weight);
-    title( compose( '%s Entered %f', blockpath, (entries/n_iter) ) );
+%     title( compose( '%s Entered %f', blockpath, (entries/n_iter) ) );
+    title(blockpath);
 end
 
