@@ -1,10 +1,10 @@
-function poseq = ProbOfSequence(states_dg, perc_entries, logsout)
+function po_seq = ProbOfSequence(states_dg, perc_entries, logsout)
 %PROBOFSEQUENCE Gives the probability of a sequence of events from logsout
 % traverses states_dg, in the same way as UpdateEdgeWeights (referring to
 % logsout for nodes), and multiplies edge weights along the way to get the
 % probabilty of a sequence of events
     
-    poseq = perc_entries;
+    po_seq = perc_entries;
     
     startNode = states_dg.Nodes.Name{1};
 
@@ -34,8 +34,9 @@ function poseq = ProbOfSequence(states_dg, perc_entries, logsout)
         % iterate through destination nodes to find the path taken:
         dest_len = length(dest); % number of destination nodes
         for ii = 1:dest_len
-            if sum( strcmp( VisitedStates.Name, dest(ii) ) )       
-                poseq = poseq * states_dg.Edges.Weight(edge_idx);
+            if sum( strcmp( VisitedStates.Name, dest(ii) ) )     
+                edge_idx = states_dg.findedge( ancestor, dest(ii) );
+                po_seq = po_seq * states_dg.Edges.Weight(edge_idx);
 
                 % there should only be 1 successor that's true (would otherwise
                 % break depth-based traversal)
