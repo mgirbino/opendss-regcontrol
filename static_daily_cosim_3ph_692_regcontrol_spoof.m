@@ -880,6 +880,9 @@ tapPos = zeros(N, length(regNames));
 VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
 CurrentsInOut = zeros(3,2,N);
 
+ReplayVoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
+ReplayCurrentsInOut = zeros(3,2,N);
+
 RealPowerInOut = zeros(3,2,N);
 ReactPowerInOut = zeros(3,2,N);
 
@@ -895,16 +898,32 @@ LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);
 
 % size of connected load is kW=1155 kvar=660
 % 
-kWRated = 600;
-kWhRated = 1*kWRated;
-kWhStored = 1*kWRated;
-% 
-% % add storage element:
-DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
-    kWRated, kWhRated, kWhStored);
-DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+% kWRated = 600;
+% kWhRated = 1*kWRated;
+% kWhStored = 1*kWRated;
+% % 
+% % % add storage element:
+% DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%     kWRated, kWhRated, kWhStored);
+% DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
 
 N = 96;
+% 
+% VoltageReplay = zeros(4,3,N);
+% CurrentReplay = zeros(4,3,N);
+% PowerReplay = zeros(4,3,N);
+% VTerminalReplay = zeros(4,3,N);
+% PresentTapReplay = zeros(3,1,N);
+
+ReplayMeas = load('reg692_replay.mat', 'VoltageReplay', 'CurrentReplay', ...
+    'PowerReplay', 'VTerminalReplay', 'PresentTapReplay');
+
+VoltageReplay = ReplayMeas.VoltageReplay;
+CurrentReplay = ReplayMeas.CurrentReplay;
+PowerReplay = ReplayMeas.PowerReplay;
+VTerminalReplay = ReplayMeas.VTerminalReplay;
+PresentTapReplay = ReplayMeas.PresentTapReplay;
+
 
 for nn = 1:N
     tic;
@@ -927,23 +946,30 @@ for nn = 1:N
             DSSCircuit.SetActiveElement(char( strcat('Transformer.', xsfNames{phase}) ));
             xf_ckt = DSSCircuit.ActiveCktElement;
             
-            ControlledTransformerVoltages.Value(:,phase) = MakeComplex(xf_ckt.Voltages); 
+            ControlledTransformerVoltages.Value(:,phase) = VoltageReplay(:,phase,nn);
             % [in ... | out ...]' (complex)
 
-            ControlledTransformerCurrents.Value(:,phase) = MakeComplex(xf_ckt.Currents); 
+            ControlledTransformerCurrents.Value(:,phase) = CurrentReplay(:,phase,nn); 
             % [in ... | out ...]' (complex)
 
-            ControlledTransformerPowers.Value(:,phase) = MakeComplex(xf_ckt.Powers); 
+            ControlledTransformerPowers.Value(:,phase) = PowerReplay(:,phase,nn);
             % [in ... | out ...]' (complex)
 
             % this would come from a separate tranformer if UsingRegulatedBus:
-            VTerminal.Value(:,phase) = MakeComplex(xf_ckt.Voltages);
+            VTerminal.Value(:,phase) = VTerminalReplay(:,phase,nn);
             % [in ... | out ...]' (complex)
             
             xf_trans.Name = xsfNames{phase};            
-            PresentTap.Value(phase) = double(xf_trans.Tap); 
+            PresentTap.Value(phase) = PresentTapReplay(phase,:,nn);
             % foregoing storage in TReg.Winding(tw).puTap
-        end        
+        end      
+        
+        % logging for replay attack:
+%         VoltageReplay(:,:,nn) = ControlledTransformerVoltages.Value;
+%         CurrentReplay(:,:,nn) = ControlledTransformerCurrents.Value;
+%         PowerReplay(:,:,nn) = ControlledTransformerPowers.Value;
+%         VTerminalReplay(:,:,nn) = VTerminal.Value;
+%         PresentTapReplay(:,:,nn) = PresentTap.Value;
 
         % 3 - configure simulation parameters with prior timestep's results:    
         TimeInSec.Value = TimeInVals(nn);
@@ -1068,6 +1094,11 @@ for nn = 1:N
         CurrentsInOut(phase,1,nn) = tempCurr(1);
         CurrentsInOut(phase,2,nn) = tempCurr(3);
         
+        ReplayVoltagesInOut(phase,1,nn) = abs(VoltageReplay(1,phase,nn));
+        ReplayVoltagesInOut(phase,2,nn) = abs(VoltageReplay(3,phase,nn));
+        ReplayCurrentsInOut(phase,1,nn) = abs(CurrentReplay(1,phase,nn));
+        ReplayCurrentsInOut(phase,2,nn) = abs(CurrentReplay(3,phase,nn));
+        
         RealPowerInOut(phase,1,nn) = tempP(1);
         RealPowerInOut(phase,2,nn) = tempP(3);
         ReactPowerInOut(phase,1,nn) = tempQ(1);
@@ -1126,48 +1157,68 @@ xlabel('Hour');
 hold off
 
 Vin = VoltagesInOut(:,1,:);
+VRin = ReplayVoltagesInOut(:,1,:);
 figure(2);
 subplot(2,1,1);
 plot(Time(1:N), Vin(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Vin(2,1:N),'-r+');
 plot(Time(1:N), Vin(3,1:N),'-b+');
-title('Voltages on Input Terminal (Stateflow RegControl Emulation, All Phases)');
+
+plot(Time(1:N), VRin(1,1:N),'--k+');  % black *
+plot(Time(1:N), VRin(2,1:N),'--r+');
+plot(Time(1:N), VRin(3,1:N),'--b+');
+title('Voltages on Input Terminal (Read: Dashed, Actual: Solid)');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
 
 Vout = VoltagesInOut(:,2,:);
+VRout = ReplayVoltagesInOut(:,2,:);
 subplot(2,1,2);
 plot(Time(1:N), Vout(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Vout(2,1:N),'-r+');
 plot(Time(1:N), Vout(3,1:N),'-b+');
-title('Voltages on Output Terminal (Stateflow RegControl Emulation, All Phases)');
+
+plot(Time(1:N), VRout(1,1:N),'--k+');  % black *
+plot(Time(1:N), VRout(2,1:N),'--r+');
+plot(Time(1:N), VRout(3,1:N),'--b+');
+title('Voltages on Output Terminal (Read: Dashed, Actual: Solid');
 ylabel('Voltage');
 xlabel('Hour');
 hold off
 
 Cin = CurrentsInOut(:,1,:);
+CRin = ReplayCurrentsInOut(:,1,:);
 figure(3);
 subplot(2,1,1);
 plot(Time(1:N), Cin(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Cin(2,1:N),'-r+');
 plot(Time(1:N), Cin(3,1:N),'-b+');
-title('Currents on Input Terminal (Stateflow RegControl Emulation, All Phases)');
-ylabel('Voltage');
+
+plot(Time(1:N), CRin(1,1:N),'--k+');  % black *
+plot(Time(1:N), CRin(2,1:N),'--r+');
+plot(Time(1:N), CRin(3,1:N),'--b+');
+title('Currents on Input Terminal (Read: Dashed, Actual: Solid');
+ylabel('Current');
 xlabel('Hour');
 hold off
 
 Cout = CurrentsInOut(:,2,:);
+CRout = ReplayCurrentsInOut(:,2,:);
 subplot(2,1,2);
 plot(Time(1:N), Cout(1,1:N),'-k+');  % black *
 hold on
 plot(Time(1:N), Cout(2,1:N),'-r+');
 plot(Time(1:N), Cout(3,1:N),'-b+');
-title('Currents on Output Terminal (Stateflow RegControl Emulation, All Phases)');
-ylabel('Voltage');
+
+plot(Time(1:N), CRout(1,1:N),'--k+');  % black *
+plot(Time(1:N), CRout(2,1:N),'--r+');
+plot(Time(1:N), CRout(3,1:N),'--b+');
+title('Currents on Output Terminal (Read: Dashed, Actual: Solid');
+ylabel('Current');
 xlabel('Hour');
 hold off
 
@@ -1300,7 +1351,8 @@ for nn = 1:N
 end
 
 % save 'reg692_noinj.mat'
-save 'reg692_inj.mat'
+% save 'reg692_replay.mat'
+save 'reg692_under_replay.mat'
 struct2table(probability_log)
 
 %% plot sequence example:
