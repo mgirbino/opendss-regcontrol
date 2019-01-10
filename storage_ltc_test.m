@@ -110,16 +110,25 @@ DSSSolution.SolveSnap;
 
 % size of connected load is kW=1155 kvar=660
 
-kWRated = 1800;
+kWRated = 1000;
 kWhRated = 1*kWRated;
 kWhStored = 1*kWRated;
 
 % add storage element:
-DSSText.Command = sprintf('New Storage.N98 Bus1=671.1.2.3 kV=4.16 kWRated=%d kWhRated=%d kWhStored=%d', ...
-    kWRated, kWhRated, kWhStored);
-DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+% 
+% DSSText.Command = sprintf('New Storage.N98 Bus1=671.1.2.3 kV=4.16 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%     kWRated, kWhRated, kWhStored);
+% DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+% 
+% % ^ could also be generation
+% 
+% adding real-power load:
 
-% ^ could also be generation
+kWLoad = 1000;
+kVARLoad = 0;
+
+DSSText.Command = sprintf('New Load.671abc Bus1=671.1.2.3 Phases=3 Conn=Delta  Model=1 kV=2.4  kW=%d   kvar=%d', ...
+    kWLoad, kVARLoad);
 
 % Disable all controls
 DSSText.command = 'set controlmode=off';
@@ -161,16 +170,19 @@ HandleTimeLapse = zeros(N,1);
 tapPos = zeros(N, length(regNames));
 VoltagesInOut = zeros(3,2,N); % 3 phases, 2 terminals, N samples
 CurrentsInOut = zeros(3,2,N);
+RealPowerInOut = zeros(3,2,N);
+ReactPowerInOut = zeros(3,2,N);
 
 % EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
 %     'Position', {}, 'TapChange', {}, 'Device', {});
 
 % Add loadshape:
 % LoadShapeYear = csvread('LoadShape1.csv');
-LoadShapeYear = normalize( csvread('LoadShape1.csv'), 'range', [0,1] );
+LoadShapeYear = normalize( csvread('LoadShape1.csv'), 'range', [0.2,1] );
 % interpolating 24 hours into 96 x 15min periods;
 % in interpolation, index=1 becomes hour=0:
 LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);
+% LoadShapeDaily = 0.2*ones(1,96);
 
 N = 96;
 
@@ -222,15 +234,24 @@ for nn = 1:N
         
         tempVolts = abs(MakeComplex(xf_ckt.Voltages));
         tempCurr = abs(MakeComplex(xf_ckt.Currents)); 
+        tempP = real(MakeComplex(xf_ckt.Powers)); 
+        tempQ = imag(MakeComplex(xf_ckt.Powers));
+        
         VoltagesInOut(phase,1,nn) = tempVolts(1);
         VoltagesInOut(phase,2,nn) = tempVolts(3);
         CurrentsInOut(phase,1,nn) = tempCurr(1);
         CurrentsInOut(phase,2,nn) = tempCurr(3);
+        
+        RealPowerInOut(phase,1,nn) = tempP(1);
+        RealPowerInOut(phase,2,nn) = tempP(3);
+        ReactPowerInOut(phase,1,nn) = tempQ(1);
+        ReactPowerInOut(phase,2,nn) = tempQ(3);
     end
 end
 
 DSSText.Command = 'Show Eventlog';
-% DSSText.Command = 'Show Powers kva Elements';
+DSSText.Command = 'Show Powers kva Elements';
+DSSText.Command = 'Show Voltages';
 
 %% Plots 
 
@@ -292,7 +313,37 @@ ylabel('Voltage');
 xlabel('Hour');
 hold off
 
+Pin = RealPowerInOut(:,1,:);
+Qin = ReactPowerInOut(:,1,:);
+figure(4);
+subplot(2,1,1);
+plot(Time(1:N), Pin(1,1:N),'-k+');  % black *
+hold on
+plot(Time(1:N), Qin(1,1:N),'-k');
+plot(Time(1:N), Pin(2,1:N),'-r+');
+plot(Time(1:N), Qin(2,1:N),'-r');
+plot(Time(1:N), Pin(3,1:N),'-b+');
+plot(Time(1:N), Qin(3,1:N),'-b');
+title('Daily Simulation: Real and Reactive Powers on Input Terminal');
+ylabel('Power [kW or kVAR]');
+xlabel('Hour');
+hold off
 
+Pout = RealPowerInOut(:,2,:);
+Qout = ReactPowerInOut(:,2,:);
+figure(4);
+subplot(2,1,2);
+plot(Time(1:N), Pout(1,1:N),'-k+');  % black *
+hold on
+plot(Time(1:N), Qout(1,1:N),'-k');
+plot(Time(1:N), Pout(2,1:N),'-r+');
+plot(Time(1:N), Qout(2,1:N),'-r');
+plot(Time(1:N), Pout(3,1:N),'-b+');
+plot(Time(1:N), Qout(3,1:N),'-b');
+title('Daily Simulation: Real and Reactive Powers on Output Terminal');
+ylabel('Power [kW or kVAR]');
+xlabel('Hour');
+hold off
 
 
 

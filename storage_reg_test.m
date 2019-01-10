@@ -201,14 +201,24 @@ DSSText.command = RCReg2a.DSSCommand;
 DSSText.command = RCReg2b.DSSCommand;
 DSSText.command = RCReg2c.DSSCommand;
 
-kWRated = 600;
-kWhRated = 1*kWRated;
-kWhStored = 1*kWRated;
+% adding storage element:
 
-% add storage element:
-DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
-    kWRated, kWhRated, kWhStored);
-DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+% kWRated = 600;
+% kWhRated = 1*kWRated;
+% kWhStored = 1*kWRated;
+% 
+% % add storage element:
+% DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%     kWRated, kWhRated, kWhStored);
+% DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+
+% adding real-power load:
+kWLoad = 600;
+kVARLoad = 0;
+
+DSSText.Command = sprintf('New Load.675abc Bus1=675.1.2.3 Phases=3 Conn=Wye  Model=1 kV=2.4  kW=%d   kvar=%d', ...
+    kWLoad, kVARLoad);
+
 
 %% Snapshot approximating Daily Simulation:
 
