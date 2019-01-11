@@ -11,7 +11,8 @@ function prob_log = MakeProbChart(simOut, hr, sec, phases, fieldnames, entries, 
     num_fields = length(fieldnames);
 
     showIDmode = (length(varargin) == num_fields + 1) && strcmp(varargin{end}, 'ShowID');
-    uniqueSeqs = struct('Probability', {}, 'Sequence', {}, 'ID', {});
+    showBudgetMode = (length(varargin) == num_fields + 1) && strcmp(varargin{end}, 'ShowBudget');
+    uniqueSeqs = struct('Probability', {}, 'Sequence', {}, 'ID', {}, 'Count', {});
     
     N = length(simOut);
     
@@ -32,7 +33,7 @@ function prob_log = MakeProbChart(simOut, hr, sec, phases, fieldnames, entries, 
                         sprintf('\\w*%s\\w*', regWsNames{phase}));
             
             for graph_ind = 1:num_fields
-                if showIDmode
+                if showIDmode || showBudgetMode
                     if phase <= size(uniqueSeqs,1) && graph_ind <= size(uniqueSeqs,2) && ...
                         ~isempty(uniqueSeqs(phase, graph_ind, 1).Probability)
                         to_po_seq = uniqueSeqs(phase, graph_ind, :);
@@ -40,12 +41,19 @@ function prob_log = MakeProbChart(simOut, hr, sec, phases, fieldnames, entries, 
                         to_po_seq = struct.empty;
                     end
                     
-                    [po_seq, temp_us, ID] = ...
+                    [po_seq, temp_us, ID, count] = ...
                         ProbOfSequence(getfield(varargin{graph_ind}, regWsNames{phase}), ...
                         entries(phase, graph_ind)/N, loclog, to_po_seq);
                     uniqueSeqs(phase, graph_ind, 1:size(temp_us,3)) = temp_us;                    
-                    prob_struct = setfield(prob_struct, fieldnames{graph_ind}, ...
-                        table(po_seq, ID, 'VariableNames', {'P' 'ID'}));
+                    
+                    if showIDmode
+                        prob_struct = setfield(prob_struct, fieldnames{graph_ind}, ...
+                            table(po_seq, ID, 'VariableNames', {'P' 'ID'}));
+                    else % showBudgetMode
+                        prob_struct = setfield(prob_struct, fieldnames{graph_ind}, ...
+                            table(po_seq, ID, count, count/(N*po_seq), ...
+                            'VariableNames', {'P' 'ID', 'Ct', 'Bgt'}));
+                    end                                 
                 else
                     po_seq = ProbOfSequence(getfield(varargin{graph_ind}, regWsNames{phase}), ...
                         entries(phase, graph_ind)/N, loclog);

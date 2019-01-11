@@ -78,9 +78,9 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
     if uniqueness_mode
         % if sequence already exists in uniqueSeqList, it's not
         % a unique sequence:
-        isUnique = false;
         seqID = 0;
         usl_len = 0;
+        count = 1;
         
         % empty if not in the list, single row if is:
         if ~isempty(uniqueSeqList)
@@ -88,6 +88,8 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
                 if isequal(uniqueSeqList(1,1,ii).Probability, po_seq) && ...
                         isequal(uniqueSeqList(1,1,ii).Sequence, ongoingSeq)
                     seqID = ii;
+                    count = uniqueSeqList(1,1,ii).Count + 1;
+                    uniqueSeqList(1,1,ii).Count = count;
                 elseif isempty(uniqueSeqList(1,1,ii).Probability)
                     usl_len = ii - 1;
                     break
@@ -105,17 +107,17 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
         
         varargout{1} = uniqueSeqList; % the complete list
         varargout{2} = seqID; % this sequence's identifier in the list
-        varargout{3} = isUnique; % whether sequence is unique
+        varargout{3} = count; % number of occurrences
     end
     
     function addSeqToList
         seqID = usl_len + 1;
-        usl_layer = struct('Probability', po_seq, 'Sequence', {ongoingSeq}, 'ID', seqID);
+        usl_layer = struct('Probability', po_seq, 'Sequence', {ongoingSeq}, ...
+            'ID', seqID, 'Count', count);
         if isempty(uniqueSeqList)
             uniqueSeqList = usl_layer;
         else
             uniqueSeqList(1,1,seqID) = usl_layer;       
         end
-        isUnique = true;
     end
 end

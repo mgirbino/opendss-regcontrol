@@ -29,6 +29,13 @@ prob_inj_ID = MakeProbChart(inj_data.simOut, inj_data.HourOutVals, inj_data.SecO
 pi_ID_tab = struct2table(prob_inj_ID);
 pi_ID_tab.RegControl1
 
+prob_inj_ID = MakeProbChart(inj_data.simOut, inj_data.HourOutVals, inj_data.SecOutVals, 1:3, ...
+    {'MakeTC' 'Exec' 'LFwd' 'LRev' 'RevN'}, ...
+    [inj_data.MakeTCentries inj_data.ExecEntries inj_data.LookingFwdEntries inj_data.LookingRevDRPentries inj_data.LookingRevRNCentries], ...
+    inj_data.MakeTCgraph, inj_data.ExecGraph, inj_data.LookingFwdGraph, inj_data.LookingRevDRPgraph, inj_data.LookingRevRNCgraph, 'ShowBudget');
+pi_ID_tab = struct2table(prob_inj_ID);
+pi_ID_tab.RegControl1
+
 %% view probabilities of one sequence based on another sequence's Markov chain:
 
 ni_thru_i = MakeProbChart(noinj_data.simOut, inj_data.HourOutVals, inj_data.SecOutVals, 1:3, ...
