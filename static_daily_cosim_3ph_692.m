@@ -900,13 +900,19 @@ kWhRated = 1*kWRated;
 kWhStored = 1*kWRated;
 % 
 % % add storage element:
-DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
-    kWRated, kWhRated, kWhStored);
-DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+% DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%     kWRated, kWhRated, kWhStored);
+% DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
 
 N = 96;
 
 for nn = 1:N
+    if nn == 25
+        % connect storage element at 1/4 day:
+        DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+            kWRated, kWhRated, kWhStored);
+        DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+    end
     tic;
     
     DSSSolution.LoadMult = LoadShapeDaily(nn); % new loadshape per iteration
@@ -1300,7 +1306,7 @@ for nn = 1:N
 end
 
 % save 'reg692_noinj.mat'
-save 'reg692_inj.mat'
+save 'reg692_inj_quarter.mat'
 struct2table(probability_log)
 
 %% plot sequence example:
