@@ -56,7 +56,7 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
                 ancestor = dest(ii);
                 dest = states_dg.successors( dest(ii) );
                 
-                ongoingSeq{idx} = ancestor;
+                ongoingSeq{idx} = ancestor{1};
                 
                 break
             elseif ii == dest_len % false and it's the last successor
@@ -67,7 +67,7 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
                     dest = string.empty; % breaks while loop
                     po_seq = 1 - perc_entries;
                     
-                    ongoingSeq = {'Before' 'After'};
+                    ongoingSeq = {'Before'; 'After'};
                 else                    
                     error('State Machine is exiting before reaching a stable state');
                 end
@@ -79,25 +79,43 @@ function [po_seq, varargout] = ProbOfSequence(states_dg, perc_entries, logsout, 
         % if sequence already exists in uniqueSeqList, it's not
         % a unique sequence:
         isUnique = false;
+        seqID = 0;
+        usl_len = 0;
         
         % empty if not in the list, single row if is:
-        matching_prob = uniqueSeqList(ismember(uniqueSeqList.Probability, po_seq));
-        
-        if ~isempty(matching_prob)
-            % probability exists in table --> need to match sequence now
-            if isequal(matching_prob.Sequence, ongoingSeq)
-                % if sequence isn't in there, it is added and marked as
-                % unique:
-                usl_row = table(po_seq, ongoingSeq, 'VariableNames', {'Probability' 'Sequence'});
-                uniqueSeqList = vertcat(uniqueSeqList, usl_row);                
-                isUnique = true;
+        if ~isempty(uniqueSeqList)
+            for ii = 1:size(uniqueSeqList,3)
+                if isequal(uniqueSeqList(1,1,ii).Probability, po_seq) && ...
+                        isequal(uniqueSeqList(1,1,ii).Sequence, ongoingSeq)
+                    seqID = ii;
+                elseif isempty(uniqueSeqList(1,1,ii).Probability)
+                    usl_len = ii - 1;
+                    break
+                end
+                usl_len = ii;
             end
-        else % probability not in the table, so neither is sequence --> unique
-            usl_row = table(po_seq, ongoingSeq, 'VariableNames', {'Probability' 'Sequence'});
-            uniqueSeqList = vertcat(uniqueSeqList, usl_row);      
-            isUnique = true;
+            
+            % if it wasn't found in the list:
+            if seqID == 0
+                addSeqToList;
+            end
+        else % list empty --> add sequence
+            addSeqToList;
         end
-        varargout{1} = isUnique;
-        varargout{2} = uniqueSeqList;
+        
+        varargout{1} = uniqueSeqList; % the complete list
+        varargout{2} = seqID; % this sequence's identifier in the list
+        varargout{3} = isUnique; % whether sequence is unique
+    end
+    
+    function addSeqToList
+        seqID = usl_len + 1;
+        usl_layer = struct('Probability', po_seq, 'Sequence', {ongoingSeq}, 'ID', seqID);
+        if isempty(uniqueSeqList)
+            uniqueSeqList = usl_layer;
+        else
+            uniqueSeqList(1,1,seqID) = usl_layer;       
+        end
+        isUnique = true;
     end
 end

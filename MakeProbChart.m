@@ -8,7 +8,11 @@ function prob_log = MakeProbChart(simOut, hr, sec, phases, fieldnames, entries, 
 %   3 x nargin matrix of state entries; and the
 %   rest are specified structs containing digraphs, indexed by their
 %   names
+    num_fields = length(fieldnames);
 
+    showIDmode = (length(varargin) == num_fields + 1) && strcmp(varargin{end}, 'ShowID');
+    uniqueSeqs = struct('Probability', {}, 'Sequence', {}, 'ID', {});
+    
     N = length(simOut);
     
     regWsNames = fields(varargin{1}); % names that index digraphs inside containing structs
@@ -27,11 +31,26 @@ function prob_log = MakeProbChart(simOut, hr, sec, phases, fieldnames, entries, 
             loclog = find(simOut(nn).logsout, '-regexp', 'BlockPath', ...
                         sprintf('\\w*%s\\w*', regWsNames{phase}));
             
-            for graph_ind = 1:length(fieldnames)
-                po_seq = ProbOfSequence(getfield(varargin{graph_ind}, regWsNames{phase}), ...
-                    entries(phase, graph_ind)/N, loclog);
-                
-                prob_struct = setfield(prob_struct, fieldnames{graph_ind}, po_seq);
+            for graph_ind = 1:num_fields
+                if showIDmode
+                    if phase <= size(uniqueSeqs,1) && graph_ind <= size(uniqueSeqs,2) && ...
+                        ~isempty(uniqueSeqs(phase, graph_ind, 1).Probability)
+                        to_po_seq = uniqueSeqs(phase, graph_ind, :);
+                    else
+                        to_po_seq = struct.empty;
+                    end
+                    
+                    [po_seq, temp_us, ID] = ...
+                        ProbOfSequence(getfield(varargin{graph_ind}, regWsNames{phase}), ...
+                        entries(phase, graph_ind)/N, loclog, to_po_seq);
+                    uniqueSeqs(phase, graph_ind, 1:size(temp_us,3)) = temp_us;                    
+                    prob_struct = setfield(prob_struct, fieldnames{graph_ind}, ...
+                        table(po_seq, ID, 'VariableNames', {'P' 'ID'}));
+                else
+                    po_seq = ProbOfSequence(getfield(varargin{graph_ind}, regWsNames{phase}), ...
+                        entries(phase, graph_ind)/N, loclog);
+                    prob_struct = setfield(prob_struct, fieldnames{graph_ind}, po_seq);
+                end              
             end
 
             prob_log(nn) = setfield(prob_log(nn), regWsNames{phase}, ...
