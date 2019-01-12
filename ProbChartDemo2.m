@@ -157,5 +157,54 @@ figure(2)
 h = PlotSequence(MakeDigraphProb( getfield(noinj_data.LookingRevDRPgraph, noinj_data.regWsNames{phase}) ), ...
     noinj_data.LookingRevDRPblockpath, noinj_data.LookingRevDRPentries(phase), length(inj_data.simOut), ...
         '', '.Finished', loclog);
+    
+%% Experiments with the data:
+
+% keep in mind that these ID's all mean different things.
+% (assume they're the same for now)
+dat1 = i_thru_ni_tab.RegControl1.Exec.ID;
+dat2 = i_thru_ni_tab.RegControl2.Exec.ID;
+dat3 = i_thru_ni_tab.RegControl3.Exec.ID;
+
+idx = i_thru_ni_tab.idx;
+
+prob = i_thru_ni_tab.RegControl1.Exec.P;
+normal_dat = dat1 / sum(dat1); % adds to 1dat/
+
+ts1 = timeseries(dat1,idx);
+ts2 = timeseries(dat2,idx);
+ts3 = timeseries(dat3,idx);
+
+figure(4)
+plot(ts1,'k');
+hold on
+plot(ts2,'r');
+plot(ts3,'b');
+
+%% comparison based on same data, but using same ID's for consistency:
+
+% example: probability of events of power injection (unexpected) occurring
+% under normal conditions (no power injection; expected)
+[i_thru_i, sequences] = MakeProbChart(inj_data.simOut, noinj_data.HourOutVals, noinj_data.SecOutVals, 1:3, ...
+    {'MakeTC' 'Exec' 'LFwd' 'LRev' 'RevN'}, ...
+    [noinj_data.MakeTCentries noinj_data.ExecEntries noinj_data.LookingFwdEntries noinj_data.LookingRevDRPentries noinj_data.LookingRevRNCentries], ...
+    noinj_data.MakeTCgraph, noinj_data.ExecGraph, noinj_data.LookingFwdGraph, noinj_data.LookingRevDRPgraph, noinj_data.LookingRevRNCgraph, 'ShowBudget');
+
+i_thru_ni_sameIDs = MakeProbChart(inj_data.simOut, noinj_data.HourOutVals, noinj_data.SecOutVals, 1:3, ...
+    {'MakeTC' 'Exec' 'LFwd' 'LRev' 'RevN'}, ...
+    [noinj_data.MakeTCentries noinj_data.ExecEntries noinj_data.LookingFwdEntries noinj_data.LookingRevDRPentries noinj_data.LookingRevRNCentries], ...
+    noinj_data.MakeTCgraph, noinj_data.ExecGraph, noinj_data.LookingFwdGraph, noinj_data.LookingRevDRPgraph, noinj_data.LookingRevRNCgraph, ...
+    'ShowBudget', sequences);
+
+i_thru_ni_tab2 = struct2table(i_thru_ni_sameIDs);
+
+rc1_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl1)
+rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl2)
+rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl3)
+
+
+
+
+
 
 
