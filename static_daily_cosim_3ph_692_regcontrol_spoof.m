@@ -898,9 +898,12 @@ LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);
 
 % size of connected load is kW=1155 kvar=660
 % 
-% kWRated = 600;
-% kWhRated = 1*kWRated;
-% kWhStored = 1*kWRated;
+kWRated = 600;
+kWhRated = 1*kWRated;
+kWhStored = 1*kWRated;
+
+kWLoad = 600;
+kVARLoad = 0;
 % % 
 % % % add storage element:
 % DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
@@ -915,7 +918,7 @@ N = 96;
 % VTerminalReplay = zeros(4,3,N);
 % PresentTapReplay = zeros(3,1,N);
 
-ReplayMeas = load('reg692_replay.mat', 'VoltageReplay', 'CurrentReplay', ...
+ReplayMeas = load('reg692_noinj_replog.mat', 'VoltageReplay', 'CurrentReplay', ...
     'PowerReplay', 'VTerminalReplay', 'PresentTapReplay');
 
 VoltageReplay = ReplayMeas.VoltageReplay;
@@ -926,6 +929,15 @@ PresentTapReplay = ReplayMeas.PresentTapReplay;
 
 
 for nn = 1:N
+    if nn == 25
+%         % connect storage element at 1/4 day:
+%         DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%             kWRated, kWhRated, kWhStored);
+%         DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+        
+        DSSText.Command = sprintf('New Load.675abc Bus1=675.1.2.3 Phases=3 Conn=Wye  Model=1 kV=2.4  kW=%d   kvar=%d', ...
+            kWLoad, kVARLoad);
+    end
     tic;
     
     DSSSolution.LoadMult = LoadShapeDaily(nn); % new loadshape per iteration
@@ -1142,6 +1154,7 @@ for nn = 1:N
     end
 end
 
+save 'reg692_spoof_load.mat'
 %% Plots 
 
 Time = TimeOutVals/3600; % converts cumulative seconds to hours

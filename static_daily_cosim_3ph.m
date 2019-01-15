@@ -832,7 +832,7 @@ EventLog = struct( 'Hour', {}, 'Sec', {}, 'ControlIter', {}, 'Action', {}, ...
 
 % Add loadshape:
 % LoadShapeYear = csvread('LoadShape1.csv');
-LoadShapeYear = normalize( csvread('LoadShape1.csv'), 'range', [0,1] );
+LoadShapeYear = normalize( csvread('LoadShape1.csv'), 'range', [0.2,1] );
 % interpolating 24 hours into 96 x 15min periods;
 % in interpolation, index=1 becomes hour=0:
 LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);

@@ -898,6 +898,9 @@ LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);
 kWRated = 600;
 kWhRated = 1*kWRated;
 kWhStored = 1*kWRated;
+
+kWLoad = 600;
+kVARLoad = 0;
 % 
 % % add storage element:
 % DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
@@ -906,12 +909,21 @@ kWhStored = 1*kWRated;
 
 N = 96;
 
+% VoltageReplay = zeros(4,3,N);
+% CurrentReplay = zeros(4,3,N);
+% PowerReplay = zeros(4,3,N);
+% VTerminalReplay = zeros(4,3,N);
+% PresentTapReplay = zeros(3,1,N);
+
 for nn = 1:N
     if nn == 25
         % connect storage element at 1/4 day:
-        DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
-            kWRated, kWhRated, kWhStored);
-        DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+%         DSSText.Command = sprintf('New Storage.N98 Bus1=675.1.2.3 kV=2.4 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%             kWRated, kWhRated, kWhStored);
+%         DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+        
+        DSSText.Command = sprintf('New Load.675abc Bus1=675.1.2.3 Phases=3 Conn=Wye  Model=1 kV=2.4  kW=%d   kvar=%d', ...
+            kWLoad, kVARLoad);
     end
     tic;
     
@@ -949,7 +961,14 @@ for nn = 1:N
             xf_trans.Name = xsfNames{phase};            
             PresentTap.Value(phase) = double(xf_trans.Tap); 
             % foregoing storage in TReg.Winding(tw).puTap
-        end        
+        end      
+        
+        % logging for replay attack:
+%         VoltageReplay(:,:,nn) = ControlledTransformerVoltages.Value;
+%         CurrentReplay(:,:,nn) = ControlledTransformerCurrents.Value;
+%         PowerReplay(:,:,nn) = ControlledTransformerPowers.Value;
+%         VTerminalReplay(:,:,nn) = VTerminal.Value;
+%         PresentTapReplay(:,:,nn) = PresentTap.Value;
 
         % 3 - configure simulation parameters with prior timestep's results:    
         TimeInSec.Value = TimeInVals(nn);
@@ -1116,6 +1135,8 @@ for nn = 1:N
         LookingRevRNCentries(phase)   =   LookingRevRNCentries(phase) + LookingRevRNCentry(phase);
     end
 end
+
+save 'reg692_load_quarter.mat'
 
 %% Plots 
 
@@ -1306,7 +1327,6 @@ for nn = 1:N
 end
 
 % save 'reg692_noinj.mat'
-save 'reg692_inj_quarter.mat'
 struct2table(probability_log)
 
 %% plot sequence example:

@@ -1,4 +1,4 @@
-function [prob_log, varargout] = MakeProbChart(simOut, hr, sec, phases, ...
+function [prob_chart, varargout] = MakeProbChart(simOut, hr, sec, phases, ...
     fieldnames, entries, varargin)
 %MAKEPROBCHART Outputs a chart of probabilities of state transitions taken
 %in simOut; can be used to see probability of an event through a separate
@@ -98,6 +98,8 @@ function [prob_log, varargout] = MakeProbChart(simOut, hr, sec, phases, ...
                 struct2table(prob_struct));
         end
     end
+    
+    prob_chart = struct2table(prob_log);
     
     varargout{1} = uniqueSeqs;
 end

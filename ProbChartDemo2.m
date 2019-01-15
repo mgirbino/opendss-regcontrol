@@ -1,5 +1,5 @@
 %% Loading data:
-inj_data = load('reg692_inj.mat', 'simOut', 'HourOutVals', 'SecOutVals', 'regWsNames', ...
+inj_data = load('reg692_inj.mat', 'simOut', 'HourOutVals', 'SecOutVals', 'TimeOutVals', 'regWsNames', ...
     'MakeTCentries', 'ExecEntries', 'LookingFwdEntries', 'LookingRevDRPentries', ...
     'LookingRevRNCentries', 'MakeTCgraph', 'ExecGraph', 'LookingFwdGraph', ...
     'LookingRevDRPgraph', 'LookingRevRNCgraph', 'ExecBlockpath', 'EventLog');
@@ -185,7 +185,7 @@ plot(ts3,'b');
 
 % example: probability of events of power injection (unexpected) occurring
 % under normal conditions (no power injection; expected)
-[i_thru_i, sequences] = MakeProbChart(inj_data.simOut, noinj_data.HourOutVals, noinj_data.SecOutVals, 1:3, ...
+[ni_thru_ni, sequences] = MakeProbChart(noinj_data.simOut, noinj_data.HourOutVals, noinj_data.SecOutVals, 1:3, ...
     {'MakeTC' 'Exec' 'LFwd' 'LRev' 'RevN'}, ...
     [noinj_data.MakeTCentries noinj_data.ExecEntries noinj_data.LookingFwdEntries noinj_data.LookingRevDRPentries noinj_data.LookingRevRNCentries], ...
     noinj_data.MakeTCgraph, noinj_data.ExecGraph, noinj_data.LookingFwdGraph, noinj_data.LookingRevDRPgraph, noinj_data.LookingRevRNCgraph, 'ShowBudget');
@@ -196,11 +196,35 @@ i_thru_ni_sameIDs = MakeProbChart(inj_data.simOut, noinj_data.HourOutVals, noinj
     noinj_data.MakeTCgraph, noinj_data.ExecGraph, noinj_data.LookingFwdGraph, noinj_data.LookingRevDRPgraph, noinj_data.LookingRevRNCgraph, ...
     'ShowBudget', sequences);
 
+ni_thru_ni_tab2 = struct2table(ni_thru_ni);
 i_thru_ni_tab2 = struct2table(i_thru_ni_sameIDs);
 
-rc1_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl1)
-rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl2)
-rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl3)
+%% compare i_thru_i and i_thru_ni ID matches of RegControl1, per state machine:
+
+fieldnames = {'MakeTC' 'Exec' 'LFwd' 'LRev' 'RevN'};
+
+N = 96;
+Time = inj_data.TimeOutVals/3600;
+
+matching = compareCharts(ni_thru_ni_tab2, i_thru_ni_tab2, fieldnames, ...
+    inj_data.regWsNames, sequences, N);
+
+[matching3D, matching_tab] = compareChartsOverTime(ni_thru_ni_tab2, i_thru_ni_tab2, fieldnames, ...
+    inj_data.regWsNames, sequences, N);
+
+figure(1)
+plot(Time, matching_tab.RegControl1.MakeTC, '+k-');
+hold on
+plot(Time, matching_tab.RegControl1.Exec, '+r-');
+plot(Time, matching_tab.RegControl1.LFwd, '+b-');
+plot(Time, matching_tab.RegControl1.LRev, '+g-');
+grid on
+legend(fieldnames{1:4}, 'Location', 'east');
+title('Matching Coefficient Over Time');
+
+% rc1_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl1)
+% rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl2)
+% rc2_sm2 = horzcat(i_thru_ni_tab2(:, {'idx' 'hr' 'sec'}), i_thru_ni_tab2.RegControl3)
 
 
 
