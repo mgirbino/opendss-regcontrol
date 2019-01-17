@@ -3,12 +3,28 @@ function [matching, varargout] = compareChartsOverTime(chart1, chart2, ...
 %COMPARECHARTSOVERTIME outputs a percentage match between 2 probability charts
 %   Separates charts into vectors of IDs and counts number of matches,
 %   normalized to number of entries (N), in a 3D matrix tracking match over
-%   time (optionally beginning at startIdx <= N)
-    startIdx = 1;
+%   time (optionally beginning at startIdx <= N, with a specified window of
+%   recent points)
+
+    % use inputParser for adjustable windowing!!
+    % args are startIdx and window
+    p = inputParser;
+    numchk = {'numeric'};
+    posint = {'nonempty','integer','positive','nonzero'};
+
+    % doubles:
+    addOptional(p,'StartIdx',1,@(x)validateattributes(x,numchk,posint));
+    addOptional(p,'Window',N/12,@(x)validateattributes(x,numchk,posint));
+
+    parse(p,varargin{:});
+
+    startIdx = p.Results.StartIdx;
+    window = p.Results.Window;
     
-    % in case startIdx is specified:
-    if length(varargin) == 1
-        startIdx = varargin{1};
+    % check for/correct infeasible window:
+    tempStart = startIdx - window;
+    if tempStart < 1
+        startIdx = startIdx - tempStart;
     end
     
     seqDims = size(sequences);
@@ -45,7 +61,7 @@ function [matching, varargout] = compareChartsOverTime(chart1, chart2, ...
                     % use dot product to get correlation, then divide by total:
                     matching( phase, sm, (nn-startIdx+1) ) = ...
                         matching( phase, sm, (nn-startIdx+1) ) + ...
-                        dot( bools1(startIdx:nn), bools2(startIdx:nn) )/nn;
+                        dot( bools1( (nn-window+1):nn ), bools2( (nn-window+1):nn ) )/window;
                 end
             end
         end
@@ -54,6 +70,7 @@ function [matching, varargout] = compareChartsOverTime(chart1, chart2, ...
     % optionally return a table:
     if nargout == 2
         match_struct = struct;
+        match_struct.idx = [startIdx:N]';
         
         for phase = 1:seqDims(1)
             reg1match = zeros(seqDims(2), sz);

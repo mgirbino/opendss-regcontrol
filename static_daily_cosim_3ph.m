@@ -838,19 +838,32 @@ LoadShapeYear = normalize( csvread('LoadShape1.csv'), 'range', [0.2,1] );
 LoadShapeDaily = interp1(1:25,LoadShapeYear(1:25),(1+24/N):(24/N):25);
 
 % size of connected load is kW=1155 kvar=660
-% 
-% kWRated = 1800;
-% kWhRated = 1*kWRated;
-% kWhStored = 1*kWRated;
-% 
-% % add storage element:
-% DSSText.Command = sprintf('New Storage.N98 Bus1=671.1.2.3 kV=4.16 kWRated=%d kWhRated=%d kWhStored=%d', ...
-%     kWRated, kWhRated, kWhStored);
-% DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+
+kWRated = 1000;
+kWhRated = 1*kWRated;
+kWhStored = 1*kWRated;
+
+kWLoad = 1000;
+kVARLoad = 0;
 
 N = 96;
 
+% VoltageReplay = zeros(4,3,N);
+% CurrentReplay = zeros(4,3,N);
+% PowerReplay = zeros(4,3,N);
+% VTerminalReplay = zeros(4,3,N);
+% PresentTapReplay = zeros(3,1,N);
+
 for nn = 1:N
+    if nn == 25
+        % add storage element:
+%         DSSText.Command = sprintf('New Storage.N98 Bus1=671.1.2.3 kV=4.16 kWRated=%d kWhRated=%d kWhStored=%d', ...
+%             kWRated, kWhRated, kWhStored);
+%         DSSText.Command = 'Storage.n98.state=Dischar'; % %discharge=25';
+        
+        DSSText.Command = sprintf('New Load.671abc Bus1=671.1.2.3 Phases=3 Conn=Delta  Model=1 kV=2.4  kW=%d   kvar=%d', ...
+            kWLoad, kVARLoad);
+    end
     tic;
     
     DSSSolution.LoadMult = LoadShapeDaily(nn); % new loadshape per iteration
@@ -887,7 +900,14 @@ for nn = 1:N
             xf_trans.Name = xsfNames{phase};            
             PresentTap.Value(phase) = double(xf_trans.Tap); 
             % foregoing storage in TReg.Winding(tw).puTap
-        end        
+        end
+        
+        % logging for replay attack:
+%         VoltageReplay(:,:,nn) = ControlledTransformerVoltages.Value;
+%         CurrentReplay(:,:,nn) = ControlledTransformerCurrents.Value;
+%         PowerReplay(:,:,nn) = ControlledTransformerPowers.Value;
+%         VTerminalReplay(:,:,nn) = VTerminal.Value;
+%         PresentTapReplay(:,:,nn) = PresentTap.Value;
 
         % 3 - configure simulation parameters with prior timestep's results:    
         TimeInSec.Value = TimeInVals(nn);
@@ -1044,6 +1064,12 @@ for nn = 1:N
         LookingRevRNCentries(phase)   =   LookingRevRNCentries(phase) + LookingRevRNCentry(phase);
     end
 end
+
+% Making digraphs probabilistic (Markov Chain representation):
+[MakeTCgraph, ExecGraph, LookingFwdGraph, LookingRevDRPgraph, LookingRevRNCgraph] = ...
+    BatchMakeProbabilistic(regWsNames, MakeTCgraph, ExecGraph, LookingFwdGraph, LookingRevDRPgraph, LookingRevRNCgraph);
+
+save 'reg650_load_quarter.mat'
 
 %% Plots 
 

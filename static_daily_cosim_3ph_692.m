@@ -1136,6 +1136,10 @@ for nn = 1:N
     end
 end
 
+% Making digraphs probabilistic (Markov Chain representation):
+[MakeTCgraph, ExecGraph, LookingFwdGraph, LookingRevDRPgraph, LookingRevRNCgraph] = ...
+    BatchMakeProbabilistic(regWsNames, MakeTCgraph, ExecGraph, LookingFwdGraph, LookingRevDRPgraph, LookingRevRNCgraph);
+
 save 'reg692_load_quarter.mat'
 
 %% Plots 
